@@ -1,34 +1,17 @@
 # PUMA - Photosensitive Urinary Monitoring Apparatus
 
-**Health Monitoring System for Real-time Urine Analysis**
-
-A cutting-edge health monitoring system that combines Arduino sensors, machine learning, and modern web technologies to provide real-time urine analysis for health assessment.
-
-## Contributors:
-
-# Design Assistant:
-- Sebastian Silva
-
-# Fullstack development:
-- Nathan
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Quick Start](#quick-start)
-
-- [Project Structure](#project-structure)
-- [Hardware Requirements](#hardware-requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-
-- [API Documentation](#api-documentation)
-
 ## Overview
 
 PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monitoring system that analyzes color and pH levels of urine to provide real-time health insights. The system uses the TCS34725 color sensor and pH sensors connected to Arduino, with a Node.js backend for data processing and a Next.js frontend for visualization.
+
+# Contributors:
+
+- **Design Assistant**: Sebastian Silva
+- **Fullstack development**: Nathan Tam
+- **Hardware/Electrical Engineering**: Edmond Ter Pogosyan
+- **Technical Research & Analysish**: Anchita Ganesh
+- **CAD Modeling & Prototyping**: Ernesto Tellez Perez & Connor McVicker
+
 
 ### Key Health Indicators
 
