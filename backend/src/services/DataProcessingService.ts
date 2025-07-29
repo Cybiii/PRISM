@@ -220,12 +220,7 @@ export class DataProcessingService {
   /**
    * Get real-time system status
    */
-  getSystemStatus(): {
-    phBuffer: ReturnType<typeof this.getPhBufferStats>;
-    colorService: boolean;
-    database: boolean;
-    lastProcessed: Date | null;
-  } {
+  getSystemStatus() {
     return {
       phBuffer: this.getPhBufferStats(),
       colorService: this.colorService.isInitialized(),

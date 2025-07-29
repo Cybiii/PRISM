@@ -46,6 +46,10 @@ async function initializeServices() {
     // Initialize color classification
     colorService = new ColorClassificationService();
     await colorService.initialize();
+    
+    // Load clusters from database
+    const clusters = await dbService.getColorClusters();
+    colorService.setClusters(clusters);
     logger.info('Color classification service initialized');
 
     // Initialize data processing
@@ -83,9 +87,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Setup API routes
-setupRoutes(app, { dbService, colorService, processingService });
-
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
@@ -102,6 +103,9 @@ app.get('/health', (req, res) => {
 // Start server
 async function startServer() {
   await initializeServices();
+  
+  // Setup API routes after services are initialized
+  setupRoutes(app, { dbService, colorService, processingService });
   
   server.listen(PORT, () => {
     logger.info(`🚀 PUMA Backend Server running on port ${PORT}`);

@@ -4,34 +4,42 @@
   "description": "Photosensitive Urinary Monitoring Apparatus - Backend API",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "set NODE_ENV=development && tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "jest"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@serialport/parser-readline": "^13.0.0",
+    "color-space": "^2.0.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "helmet": "^7.1.0",
+    "ml-kmeans": "^6.0.0",
     "serialport": "^12.0.0",
     "socket.io": "^4.7.5",
+    "sqlite": "^5.1.1",
     "sqlite3": "^5.1.6",
-    "ml-kmeans": "^6.0.0",
-    "color-space": "^2.0.1",
-    "winston": "^3.11.0",
-    "dotenv": "^16.3.1"
+    "winston": "^3.11.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
-    "@types/node": "^20.10.0",
-    "typescript": "^5.3.3",
-    "tsx": "^4.6.2",
-    "jest": "^29.7.0",
+    "@types/express": "^4.17.21",
     "@types/jest": "^29.5.8",
-    "nodemon": "^3.0.2"
+    "@types/node": "^20.10.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
   },
-  "keywords": ["healthcare", "iot", "arduino", "machine-learning", "urine-analysis"],
+  "keywords": [
+    "healthcare",
+    "iot",
+    "arduino",
+    "machine-learning",
+    "urine-analysis"
+  ],
   "author": "PUMA Team",
   "license": "MIT"
-} 
+}

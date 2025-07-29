@@ -83,7 +83,7 @@ export function setupRoutes(app: Express, services: Services): void {
         data: { readings, startDate, endDate },
         timestamp: new Date().toISOString()
       };
-      res.json(response);
+      return res.json(response);
     } catch (error) {
       logger.error('Error getting readings by range:', error);
       const response: ApiResponse = {
@@ -91,7 +91,7 @@ export function setupRoutes(app: Express, services: Services): void {
         error: 'Failed to get readings',
         timestamp: new Date().toISOString()
       };
-      res.status(500).json(response);
+      return res.status(500).json(response);
     }
   });
 
@@ -136,7 +136,7 @@ export function setupRoutes(app: Express, services: Services): void {
         data: { score, recommendations },
         timestamp: new Date().toISOString()
       };
-      res.json(response);
+      return res.json(response);
     } catch (error) {
       logger.error('Error getting recommendations:', error);
       const response: ApiResponse = {
@@ -144,7 +144,7 @@ export function setupRoutes(app: Express, services: Services): void {
         error: 'Failed to get recommendations',
         timestamp: new Date().toISOString()
       };
-      res.status(500).json(response);
+      return res.status(500).json(response);
     }
   });
 
@@ -193,7 +193,7 @@ export function setupRoutes(app: Express, services: Services): void {
         data: { message: 'Simulated reading processed' },
         timestamp: new Date().toISOString()
       };
-      res.json(response);
+      return res.json(response);
     } catch (error) {
       logger.error('Error simulating reading:', error);
       const response: ApiResponse = {
@@ -201,7 +201,7 @@ export function setupRoutes(app: Express, services: Services): void {
         error: 'Failed to simulate reading',
         timestamp: new Date().toISOString()
       };
-      res.status(500).json(response);
+      return res.status(500).json(response);
     }
   });
 
@@ -258,23 +258,24 @@ export function setupRoutes(app: Express, services: Services): void {
       const readings = await dbService.getReadingsByDateRange(startDate, endDate);
       
       // Calculate analytics
+      const colorScoreDistribution: { [key: number]: number } = {};
+      
+      // Color score distribution
+      for (const reading of readings) {
+        const score = reading.colorScore;
+        colorScoreDistribution[score] = (colorScoreDistribution[score] || 0) + 1;
+      }
+      
       const analytics = {
         totalReadings: readings.length,
         avgPh: readings.length > 0 ? 
           readings.reduce((sum, r) => sum + r.phValue, 0) / readings.length : 0,
-        colorScoreDistribution: {},
+        colorScoreDistribution,
         trends: {
           ph: readings.map(r => ({ timestamp: r.timestamp, value: r.phValue })),
           colorScore: readings.map(r => ({ timestamp: r.timestamp, value: r.colorScore }))
         }
       };
-      
-      // Color score distribution
-      for (const reading of readings) {
-        const score = reading.colorScore;
-        analytics.colorScoreDistribution[score] = 
-          (analytics.colorScoreDistribution[score] || 0) + 1;
-      }
       
       const response: ApiResponse = {
         success: true,
