@@ -2,12 +2,14 @@ import { Server } from 'socket.io';
 import { ArduinoData, PHBuffer, ProcessedData, UrineReading } from '../types';
 import { DatabaseService } from './DatabaseService';
 import { ColorClassificationService } from './ColorClassificationService';
+import { supabaseService } from './SupabaseService';
 import { logger } from '../utils/logger';
 
 export class DataProcessingService {
   private phBuffer: PHBuffer;
   private readonly bufferDuration = 10000; // 10 seconds in milliseconds
   private readonly bufferCapacity = 100; // Maximum buffer size
+  private defaultUserId: string | undefined;
 
   constructor(
     private dbService: DatabaseService,
@@ -24,7 +26,7 @@ export class DataProcessingService {
   /**
    * Process incoming Arduino data - adds to pH buffer and processes color immediately
    */
-  async processArduinoData(data: ArduinoData): Promise<void> {
+  async processArduinoData(data: ArduinoData, userId?: string): Promise<void> {
     try {
       logger.debug('Processing Arduino data:', data);
 
@@ -46,7 +48,7 @@ export class DataProcessingService {
         confidence: colorResult.confidence
       };
 
-      // Save to database
+      // Save to legacy SQLite database (for backward compatibility)
       const reading: Omit<UrineReading, 'id'> = {
         timestamp: processedData.timestamp,
         phValue: processedData.phValue,
@@ -60,15 +62,37 @@ export class DataProcessingService {
       const readingId = await this.dbService.saveReading(reading);
       logger.info(`Saved reading ${readingId}: pH=${averagePh.toFixed(2)}, Color Score=${colorResult.score}, Confidence=${colorResult.confidence.toFixed(3)}`);
 
+      // Save to Supabase if we have a user ID or demo mode
+      const targetUserId = userId || this.defaultUserId;
+      if (targetUserId) {
+        try {
+          // Convert to Supabase format
+          const healthReading = supabaseService.processedDataToHealthReading(
+            targetUserId,
+            processedData, // Use the existing processedData object
+            'arduino-tcs34725'
+          );
+          
+          // Add recommendations from the color service
+          healthReading.recommendations = this.colorService.getHealthRecommendations(colorResult.score);
+          
+          await supabaseService.saveHealthReading(healthReading);
+          logger.info(`Saved reading to Supabase for user: ${targetUserId}`);
+        } catch (supabaseError) {
+          logger.warn('Failed to save to Supabase, continuing with SQLite:', supabaseError);
+        }
+      }
+
       // Emit real-time data to connected clients
       this.io.emit('newReading', {
         ...reading,
         id: readingId,
+        userId: targetUserId,
         recommendations: this.colorService.getHealthRecommendations(colorResult.score)
       });
 
       // Check for alerts
-      this.checkForAlerts(processedData);
+      this.checkForAlerts(processedData, targetUserId);
 
     } catch (error) {
       logger.error('Error processing Arduino data:', error);
@@ -117,7 +141,7 @@ export class DataProcessingService {
   /**
    * Check for health alerts and notify clients
    */
-  private checkForAlerts(data: ProcessedData): void {
+  private checkForAlerts(data: ProcessedData, userId?: string): void {
     const alerts: string[] = [];
 
     // pH alerts
@@ -144,6 +168,7 @@ export class DataProcessingService {
       logger.warn('Health alerts triggered:', alerts);
       this.io.emit('healthAlert', {
         timestamp: data.timestamp,
+        userId: userId || this.defaultUserId,
         alerts,
         data: {
           ph: data.phValue,
@@ -242,13 +267,22 @@ export class DataProcessingService {
   /**
    * Simulate data for testing purposes
    */
-  async simulateReading(phValue: number, rgbColor: { r: number; g: number; b: number }): Promise<void> {
+  async simulateReading(phValue: number, rgbColor: { r: number; g: number; b: number }, userId?: string): Promise<void> {
     const mockData: ArduinoData = {
       ph: phValue,
       color: rgbColor,
       timestamp: Date.now()
     };
 
-    await this.processArduinoData(mockData);
+    await this.processArduinoData(mockData, userId);
+  }
+
+  setDefaultUserId(userId: string): void {
+    this.defaultUserId = userId;
+    logger.info(`Set default user ID for demo mode: ${userId}`);
+  }
+
+  getDefaultUserId(): string | undefined {
+    return this.defaultUserId;
   }
 } 

@@ -1,0 +1,96 @@
+-- Minimal PUMA Database Schema
+-- Copy this entire file and paste in Supabase SQL Editor
+
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT,
+  avatar_url TEXT,
+  age INTEGER,
+  gender TEXT CHECK (gender IN ('male', 'female', 'other')),
+  medical_conditions TEXT[],
+  medications TEXT[],
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.health_readings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  ph DECIMAL(4,2) NOT NULL CHECK (ph >= 0 AND ph <= 14),
+  color_r INTEGER NOT NULL CHECK (color_r >= 0 AND color_r <= 255),
+  color_g INTEGER NOT NULL CHECK (color_g >= 0 AND color_g <= 255),
+  color_b INTEGER NOT NULL CHECK (color_b >= 0 AND color_b <= 255),
+  color_hex TEXT NOT NULL,
+  clear_value INTEGER,
+  health_score INTEGER NOT NULL CHECK (health_score >= 1 AND health_score <= 10),
+  hydration_level TEXT NOT NULL CHECK (hydration_level IN ('excellent', 'good', 'fair', 'poor', 'critical')),
+  color_temperature INTEGER,
+  confidence_score DECIMAL(5,4),
+  recommendations TEXT[],
+  alert_level TEXT CHECK (alert_level IN ('none', 'low', 'medium', 'high', 'critical')),
+  alert_message TEXT,
+  device_id TEXT,
+  reading_source TEXT DEFAULT 'tcs34725' CHECK (reading_source IN ('tcs34725', 'manual', 'calibration')),
+  notes TEXT,
+  reading_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.color_clusters (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  cluster_number INTEGER NOT NULL CHECK (cluster_number >= 1 AND cluster_number <= 10),
+  r_center DECIMAL(8,4) NOT NULL,
+  g_center DECIMAL(8,4) NOT NULL,
+  b_center DECIMAL(8,4) NOT NULL,
+  health_score INTEGER NOT NULL CHECK (health_score >= 1 AND health_score <= 10),
+  description TEXT NOT NULL,
+  recommendations TEXT[],
+  sample_count INTEGER DEFAULT 0,
+  last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  user_id UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
+  UNIQUE(cluster_number, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.daily_summaries (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  summary_date DATE NOT NULL,
+  reading_count INTEGER DEFAULT 0,
+  avg_ph DECIMAL(4,2),
+  avg_health_score DECIMAL(4,2),
+  dominant_hydration_level TEXT,
+  score_1_count INTEGER DEFAULT 0,
+  score_2_count INTEGER DEFAULT 0,
+  score_3_count INTEGER DEFAULT 0,
+  score_4_count INTEGER DEFAULT 0,
+  score_5_count INTEGER DEFAULT 0,
+  score_6_count INTEGER DEFAULT 0,
+  score_7_count INTEGER DEFAULT 0,
+  score_8_count INTEGER DEFAULT 0,
+  score_9_count INTEGER DEFAULT 0,
+  score_10_count INTEGER DEFAULT 0,
+  total_alerts INTEGER DEFAULT 0,
+  critical_alerts INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, summary_date)
+);
+
+-- Simple color clusters insert (one per line to avoid wrapping)
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (1, 255.0, 255.0, 200.0, 1, 'Pale Yellow (Excellent)', ARRAY['Maintain current hydration']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (2, 255.0, 255.0, 150.0, 2, 'Light Yellow (Very Good)', ARRAY['Good hydration level']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (3, 255.0, 235.0, 120.0, 3, 'Yellow (Good)', ARRAY['Normal hydration']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (4, 255.0, 215.0, 90.0, 4, 'Medium Yellow (Fair)', ARRAY['Increase water intake']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (5, 255.0, 195.0, 60.0, 5, 'Dark Yellow (Concerning)', ARRAY['Increase water intake']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (6, 255.0, 165.0, 40.0, 6, 'Amber (Dehydrated)', ARRAY['Drink water immediately']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (7, 200.0, 130.0, 30.0, 7, 'Dark Amber (Very Dehydrated)', ARRAY['Urgent rehydration needed']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (8, 160.0, 100.0, 20.0, 8, 'Brown (Critical)', ARRAY['Immediate medical attention']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (9, 120.0, 80.0, 40.0, 9, 'Dark Brown (Emergency)', ARRAY['Emergency medical care']);
+INSERT INTO public.color_clusters (cluster_number, r_center, g_center, b_center, health_score, description, recommendations) VALUES (10, 80.0, 60.0, 60.0, 10, 'Very Dark/Red (Critical Emergency)', ARRAY['IMMEDIATE EMERGENCY CARE']);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_health_readings_user_time ON public.health_readings(user_id, reading_time DESC);
+CREATE INDEX IF NOT EXISTS idx_health_readings_time ON public.health_readings(reading_time DESC);
+CREATE INDEX IF NOT EXISTS idx_health_readings_score ON public.health_readings(health_score);
+CREATE INDEX IF NOT EXISTS idx_daily_summaries_user_date ON public.daily_summaries(user_id, summary_date DESC); 

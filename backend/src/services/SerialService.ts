@@ -139,9 +139,25 @@ export class SerialService {
   private parseArduinoData(data: string): ArduinoData | null {
     try {
       // Expected formats:
-      // TCS34725: "PH:7.2,R:1234,G:2345,B:3456,C:4567" (16-bit values)
-      // Standard: "PH:7.2,R:255,G:200,B:100" (8-bit values)
-      // JSON: {"ph": 7.2, "r": 1234, "g": 2345, "b": 3456, "c": 4567}
+      // PUMA format: "PH:7.2,R:45123,G:50234,B:20156,C:55000"
+      // Current Arduino format: "RGB: 77, 102, 79  HEX: #4D664F"
+      // JSON format: {"ph": 7.2, "r": 1234, "g": 2345, "b": 3456, "c": 4567}
+      
+      // Handle current Arduino RGB format
+      if (data.includes('RGB:') && data.includes('HEX:')) {
+        const rgbMatch = data.match(/RGB:\s*(\d+),\s*(\d+),\s*(\d+)/);
+        if (rgbMatch) {
+          const r = parseInt(rgbMatch[1]);
+          const g = parseInt(rgbMatch[2]);
+          const b = parseInt(rgbMatch[3]);
+          
+          return {
+            ph: 7.0 + (Math.random() - 0.5) * 2, // Simulate pH 6-8
+            color: { r, g, b },
+            timestamp: Date.now()
+          };
+        }
+      }
       
       // Try JSON format first
       if (data.startsWith('{')) {
@@ -160,7 +176,7 @@ export class SerialService {
         };
       }
 
-      // Parse key-value format
+      // Parse PUMA key-value format
       const pairs = data.split(',');
       const values: { [key: string]: number } = {};
 
@@ -171,7 +187,7 @@ export class SerialService {
         }
       }
 
-      // Validate required fields
+      // Validate required fields for PUMA format
       if (typeof values.PH !== 'number' || 
           typeof values.R !== 'number' || 
           typeof values.G !== 'number' || 
