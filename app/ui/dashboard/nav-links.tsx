@@ -1,28 +1,27 @@
 'use client';
 
 import {
-  UserGroupIcon,
-  HomeIcon,
-  DocumentDuplicateIcon,
+  FireIcon, 
+  StarIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 
 const links = [
-  // TODO: get new icon
   { name: 'Summary',
     href: '/dashboard/summary',
-    icon: HomeIcon },
+    icon: FireIcon },
   {
     name: 'Today',
     href: '/dashboard',
-    icon: DocumentDuplicateIcon,
+    icon: StarIcon,
   },
   { 
     name: 'Profile',
     href: '/dashboard/profile',
-    icon: UserGroupIcon },
+    icon: UserCircleIcon },
 ];
 
 export default function NavLinks() {

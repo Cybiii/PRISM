@@ -4,12 +4,6 @@ import Link from 'next/link';
 export default function Page() {
   return (
     <main className="flex min-h-screen flex-col p-6">
-        {/* <p className="text-blue-600 text-center ">
-          <strong>Project PUMA</strong>
-        </p>
-        <p className="text-blue-600 text-center text-sm">
-          <strong>Photosensitive Urinary Something Something</strong>
-        </p> */}
         <div className="flex justify-end items-center grow flex-col gap-4">
           <Link
             href="/dashboard"
