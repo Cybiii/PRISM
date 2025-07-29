@@ -1,31 +1,34 @@
 # PUMA - Photosensitive Urinary Monitoring Apparatus
 
-**Advanced IoT Health Monitoring System for Real-time Urine Analysis**
+**Health Monitoring System for Real-time Urine Analysis**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15.4-blue.svg)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+A cutting-edge health monitoring system that combines Arduino sensors, machine learning, and modern web technologies to provide real-time urine analysis for health assessment.
 
-> 🔬 A cutting-edge health monitoring system that combines Arduino sensors, machine learning, and modern web technologies to provide real-time urine analysis for health assessment.
+## Contributors:
 
-## 📋 Table of Contents
+# Design Assistant:
+- Sebastian Silva
+
+# Fullstack development:
+- Nathan
+
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
+
 - [Project Structure](#project-structure)
 - [Hardware Requirements](#hardware-requirements)
 - [Installation](#installation)
 - [Usage](#usage)
+
 - [API Documentation](#api-documentation)
-- [Contributing](#contributing)
-- [License](#license)
 
-## 🔬 Overview
+## Overview
 
-PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monitoring system that analyzes urine color and pH levels to provide real-time health insights. The system uses the TCS34725 color sensor and pH sensors connected to Arduino, with a Node.js backend for data processing and a Next.js frontend for visualization.
+PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monitoring system that analyzes color and pH levels of urine to provide real-time health insights. The system uses the TCS34725 color sensor and pH sensors connected to Arduino, with a Node.js backend for data processing and a Next.js frontend for visualization.
 
 ### Key Health Indicators
 
@@ -34,9 +37,9 @@ PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monit
 - **Hydration Status**: Real-time dehydration detection
 - **Health Alerts**: Automatic notifications for concerning readings
 
-## ✨ Features
+## Features
 
-### 🎯 **Core Functionality**
+### **Core Functionality**
 
 - **Real-time Monitoring**: Continuous sensor data collection
 - **Machine Learning**: K-means clustering for color classification
@@ -44,7 +47,7 @@ PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monit
 - **Health Scoring**: 1-10 scale based on color analysis
 - **Alert System**: Automatic health concern notifications
 
-### 🌐 **Web Platform**
+### **Web Platform**
 
 - **Live Dashboard**: Real-time data visualization
 - **Historical Analysis**: Trend tracking and analytics
@@ -52,7 +55,7 @@ PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monit
 - **Responsive Design**: Mobile and desktop compatible
 - **Health Recommendations**: Personalized advice based on readings
 
-### 🔧 **Technical Features**
+### **Technical Features**
 
 - **TCS34725 Integration**: 16-bit color sensor support
 - **Serial Communication**: Arduino to backend data flow
@@ -61,7 +64,7 @@ PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monit
 - **TypeScript**: Type-safe development
 - **Docker Ready**: Containerized deployment
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -86,7 +89,7 @@ PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monit
 5. **WebSocket Streaming** pushes real-time updates to frontend
 6. **Dashboard Display** shows live health metrics and trends
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -126,7 +129,7 @@ The frontend will start on http://localhost:3000
 
 See [TCS34725 Setup Guide](backend/TCS34725_SETUP.md) for complete hardware integration.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 PUMA/
@@ -157,7 +160,7 @@ PUMA/
     └── arduino_sensors/
 ```
 
-## 🔩 Hardware Requirements
+## Hardware Requirements
 
 ### Required Components
 
@@ -180,9 +183,9 @@ SDA   →     A4         OUT → A0
 SCL   →     A5
 ```
 
-⚠️ **Important**: TCS34725 requires 3.3V power, NOT 5V!
+**Important**: TCS34725 requires 3.3V power, NOT 5V!
 
-## 📦 Installation
+## Installation
 
 ### Development Setup
 
@@ -232,7 +235,7 @@ SCL   →     A5
    cd ../frontend && npm start
    ```
 
-## 💻 Usage
+## Usage
 
 ### Development Mode (Mock Data)
 
@@ -275,7 +278,7 @@ cd frontend && npm start
 3. **Alert System**: Receive notifications for health concerns
 4. **Recommendations**: Get personalized hydration advice
 
-## 📊 API Documentation
+## API Documentation
 
 ### Health & Status
 
@@ -325,7 +328,7 @@ POST /api/clusters/retrain    # Retrain ML clusters
 - `healthAlert` - Health concern notifications
 - `clustersUpdated` - Updated ML clusters
 
-## 🔬 Health Scoring System
+## Health Scoring System
 
 ### Color Classification (1-10 Scale)
 
@@ -343,7 +346,7 @@ POST /api/clusters/retrain    # Retrain ML clusters
 - **Acidic**: < 4.5 (may indicate UTI, ketosis)
 - **Alkaline**: > 8.5 (may indicate infection)
 
-## 🛠️ Development
+## Development
 
 ### Adding New Features
 
@@ -368,90 +371,9 @@ cd frontend && npm test
 - **ESLint** for code quality
 - **Prettier** for formatting
 
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### Development Guidelines
-
-- Follow TypeScript best practices
-- Add tests for new features
-- Update documentation
-- Ensure Arduino code compatibility
-
-## 📝 Documentation
+## Documentation
 
 - [Backend API Documentation](backend/README.md)
 - [TCS34725 Hardware Setup](backend/TCS34725_SETUP.md)
 - [Frontend Component Guide](frontend/README.md)
 - [Arduino Integration Guide](hardware/README.md)
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Backend won't start:**
-
-- Check Node.js version (18+)
-- Verify dependencies: `npm install`
-- Check port availability (3001)
-
-**Arduino connection failed:**
-
-- Verify COM port in `.env`
-- Check USB cable connection
-- Enable development mode for mock data
-
-**Frontend not loading:**
-
-- Ensure backend is running first
-- Check port 3000 availability
-- Verify Next.js installation
-
-**Sensor readings inconsistent:**
-
-- Check TCS34725 power (3.3V not 5V!)
-- Verify I2C connections (SDA/SCL)
-- Shield from ambient light
-- Recalibrate sensors
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/your-username/PUMA/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/PUMA/discussions)
-- **Email**: support@puma-health.com
-
-## 🏆 Acknowledgments
-
-- **Adafruit** for the excellent TCS34725 sensor
-- **Arduino Community** for hardware support
-- **Next.js Team** for the amazing React framework
-- **Contributors** who make this project possible
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**Built with ❤️ for advancing healthcare through innovative IoT monitoring solutions.**
-
-## 🚀 What's Next?
-
-- [ ] Mobile app development (React Native)
-- [ ] Cloud deployment and scaling
-- [ ] Additional sensor integrations
-- [ ] AI-powered health predictions
-- [ ] Telehealth platform integration
-- [ ] Multi-user support
-- [ ] Advanced analytics dashboard
-
----
-
-_⭐ If you find PUMA helpful, please consider giving it a star on GitHub!_
