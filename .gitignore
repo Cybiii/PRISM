@@ -1,36 +1,220 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# PUMA Project .gitignore
+# Photosensitive Urinary Monitoring Apparatus
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# =============================================
+# Dependencies
+# =============================================
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# local env files
-.env*.local
+# =============================================
+# Build outputs
+# =============================================
+dist/
+build/
+out/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# =============================================
+# Environment variables
+# =============================================
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
 
-# vercel
+# =============================================
+# Database files
+# =============================================
+*.db
+*.sqlite
+*.sqlite3
+backend/data/*.db
+backend/data/*.sqlite
+
+# =============================================
+# Logs
+# =============================================
+logs/
+*.log
+backend/logs/
+frontend/logs/
+
+# =============================================
+# Runtime data
+# =============================================
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# =============================================
+# Coverage directory used by tools like istanbul
+# =============================================
+coverage/
+*.lcov
+.nyc_output/
+
+# =============================================
+# Compiled binary addons
+# =============================================
+build/Release/
+
+# =============================================
+# TypeScript
+# =============================================
+*.tsbuildinfo
+.tsbuildinfo
+
+# =============================================
+# Next.js specific
+# =============================================
+.next/
+out/
+next-env.d.ts
+
+# =============================================
+# Vercel deployment
+# =============================================
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# =============================================
+# IDEs and editors
+# =============================================
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================================
+# OS generated files
+# =============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# =============================================
+# Temporary files
+# =============================================
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# =============================================
+# Cache directories
+# =============================================
+.cache/
+.parcel-cache/
+.eslintcache
+
+# =============================================
+# Optional npm cache directory
+# =============================================
+.npm
+
+# =============================================
+# Optional REPL history
+# =============================================
+.node_repl_history
+
+# =============================================
+# Yarn Integrity file
+# =============================================
+.yarn-integrity
+
+# =============================================
+# dotenv environment variables file
+# =============================================
+.env.test
+
+# =============================================
+# Microbundle cache
+# =============================================
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# =============================================
+# Optional REPL history
+# =============================================
+.node_repl_history
+
+# =============================================
+# Jest coverage
+# =============================================
+coverage/
+
+# =============================================
+# Storybook build outputs
+# =============================================
+storybook-static/
+
+# =============================================
+# PUMA specific files
+# =============================================
+# Arduino connection logs
+backend/arduino-debug.log
+
+# Sensor calibration data (keep template, ignore actual calibration)
+backend/calibration-data/
+!backend/calibration-data/.gitkeep
+
+# Test data files
+backend/test-data/
+frontend/test-data/
+
+# Generated documentation
+docs/generated/
+
+# =============================================
+# Hardware specific (if using Arduino IDE)
+# =============================================
+*.hex
+*.elf
+*.map
+
+# =============================================
+# Backup files
+# =============================================
+*.backup
+*.bak
+*.orig
+
+# =============================================
+# Lock files (uncomment if you want to ignore them)
+# =============================================
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# =============================================
+# Development certificates
+# =============================================
+*.pem
+*.key
+*.crt
+
+# =============================================
+# Misc
+# =============================================
+.sass-cache/
+.connect.lock
+.grunt
+.lock-wscript 
