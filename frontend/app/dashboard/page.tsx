@@ -418,50 +418,7 @@ export default function Dashboard() {
     </div>
         </motion.div>
 
-        {/* Quick Stats */}
-        <motion.div 
-          variants={itemVariants}
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 lg:gap-6"
-        >
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 text-white"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-xs md:text-sm">Daily Readings</p>
-                <p className="text-xl md:text-2xl font-bold">12</p>
-              </div>
-              <ChartBarIcon className="w-6 h-6 md:w-8 md:h-8 opacity-80" />
-            </div>
-          </motion.div>
 
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 text-white"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-xs md:text-sm">Health Score</p>
-                <p className="text-xl md:text-2xl font-bold">Good</p>
-              </div>
-              <HeartIcon className="w-6 h-6 md:w-8 md:h-8 opacity-80" />
-            </div>
-          </motion.div>
-
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 text-white sm:col-span-2 md:col-span-1"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-xs md:text-sm">Streak</p>
-                <p className="text-xl md:text-2xl font-bold">7 days</p>
-              </div>
-              <SparklesIcon className="w-6 h-6 md:w-8 md:h-8 opacity-80" />
-            </div>
-          </motion.div>
-        </motion.div>
       </main>
     </motion.div>
   )

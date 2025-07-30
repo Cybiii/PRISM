@@ -84,42 +84,6 @@ export default function Login() {
     }
   }
 
-  const handleDemoLogin = async () => {
-    setLoading(true)
-    setError('')
-
-    try {
-      console.log('Starting comprehensive manual reading...')
-      
-      const response = await fetch('http://localhost:3001/api/auth/demo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      const data: AuthResponse = await response.json()
-
-      if (data.success && data.data) {
-        localStorage.setItem('puma_access_token', data.data.accessToken)
-        localStorage.setItem('puma_refresh_token', data.data.refreshToken)
-        localStorage.setItem('puma_user_data', JSON.stringify({
-          user: data.data.user,
-          profile: data.data.profile
-        }))
-
-        router.push('/dashboard')
-      } else {
-        setError(data.error || 'Demo login failed')
-      }
-    } catch (err) {
-      console.error('Demo login error:', err)
-      setError('Unable to connect to server')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -141,19 +105,21 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center p-4 md:p-6 lg:p-8">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 left-20 w-20 h-20 bg-blue-200 rounded-full opacity-10" />
-        <div className="absolute top-40 right-32 w-16 h-16 bg-purple-200 rounded-full opacity-10" />
-        <div className="absolute bottom-32 left-32 w-24 h-24 bg-indigo-200 rounded-full opacity-10" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center p-4 md:p-6 lg:p-8">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-[0.015]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='1'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: '20px 20px'
+        }}>
+        </div>
       </div>
 
       <motion.div
         initial="hidden"
         animate="visible"
         variants={containerVariants}
-        className="relative z-10 w-full max-w-md"
+        className="relative z-10 w-full max-w-md mx-auto"
       >
         {/* Header */}
         <motion.div variants={itemVariants} className="text-center mb-8">
@@ -293,41 +259,7 @@ export default function Login() {
               )}
             </motion.button>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">or</span>
-              </div>
-            </div>
 
-                         {/* Demo Button */}
-             <motion.button
-               whileHover={{ scale: 1.02 }}
-               whileTap={{ scale: 0.98 }}
-               type="button"
-               onClick={handleDemoLogin}
-               disabled={loading}
-               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 md:py-3 rounded-lg md:rounded-xl transition-all duration-200 border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-base"
-             >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-600 rounded-full"
-                  />
-                  <span>Creating Demo Account...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center space-x-2">
-                  <SparklesIcon className="w-5 h-5" />
-                  <span>Try Demo Account</span>
-                </div>
-              )}
-            </motion.button>
           </form>
 
           {/* Additional Links */}

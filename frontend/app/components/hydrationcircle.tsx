@@ -22,59 +22,50 @@ export default function HydrationCircle() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // WebSocket connection for real-time data
-    const ws = new WebSocket('ws://localhost:3001')
+    // Simulate connection status (no actual WebSocket needed for now)
+    setIsConnected(true)
     
-    ws.onopen = () => {
-      setIsConnected(true)
-      setLoading(false)
-    }
-
-    ws.onmessage = (event) => {
+    // Load latest reading from API or use fallback data
+    const loadInitialData = async () => {
       try {
-        const reading = JSON.parse(event.data)
-        if (reading.type === 'newReading' || reading.phValue !== undefined) {
-          // Convert the reading data to our expected format
+        // Try to get latest reading from API
+        const response = await fetch('http://localhost:3001/api/readings/latest')
+        const result = await response.json()
+        
+        if (result.success && result.data) {
+          const reading = result.data
           const hydrationLevel = calculateHydrationFromColor(reading.colorScore || 3)
           setData({
-            ph: reading.phValue || reading.ph || 7.0,
+            ph: reading.phValue || 7.0,
             hydration: hydrationLevel,
             colorScore: reading.colorScore || 3,
+            timestamp: new Date(reading.timestamp).toISOString()
+          })
+        } else {
+          // Use fallback data
+          setData({
+            ph: 6.8,
+            hydration: 75,
+            colorScore: 2,
             timestamp: new Date().toISOString()
           })
         }
       } catch (error) {
-        console.error('Error parsing WebSocket data:', error)
-      }
-    }
-
-    ws.onerror = () => {
-      setIsConnected(false)
-      setLoading(false)
-    }
-
-    ws.onclose = () => {
-      setIsConnected(false)
-    }
-
-    // Fallback: Generate initial mock data if no connection
-    const fallbackTimer = setTimeout(() => {
-      if (!data) {
+        console.error('Error loading latest reading:', error)
+        // Use fallback data
         setData({
           ph: 6.8,
           hydration: 75,
           colorScore: 2,
           timestamp: new Date().toISOString()
         })
+      } finally {
         setLoading(false)
       }
-    }, 3000)
-
-    return () => {
-      ws.close()
-      clearTimeout(fallbackTimer)
     }
-  }, [data])
+
+    loadInitialData()
+  }, [])
 
   const calculateHydrationFromColor = (colorScore: number): number => {
     // Convert color score (1-5) to hydration percentage
