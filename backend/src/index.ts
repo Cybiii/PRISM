@@ -26,7 +26,12 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 // Services
@@ -57,7 +62,7 @@ async function initializeServices() {
     logger.info('Data processing service initialized');
 
     // Initialize serial communication (Arduino)
-    serialService = new SerialService(processingService);
+    serialService = new SerialService(processingService, colorService);
     await serialService.initialize();
     logger.info('Serial service initialized');
 
@@ -105,7 +110,7 @@ async function startServer() {
   await initializeServices();
   
   // Setup API routes after services are initialized
-  setupRoutes(app, { dbService, colorService, processingService });
+  setupRoutes(app, { dbService, colorService, processingService, serialService });
   
   server.listen(PORT, () => {
     logger.info(`🚀 PUMA Backend Server running on port ${PORT}`);

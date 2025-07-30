@@ -258,7 +258,9 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 // Create Demo User (for testing)
 router.post('/demo', async (req: Request, res: Response) => {
   try {
+    logger.info('Demo user creation requested');
     const demoUser = await userService.createDemoUser();
+    logger.info('Demo user created successfully:', demoUser.user.email);
 
     return res.json({
       success: true,

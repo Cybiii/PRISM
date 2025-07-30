@@ -282,18 +282,77 @@ export class UserService {
 
   // For demo/testing purposes - create a demo user
   async createDemoUser(): Promise<UserSession> {
-    const demoEmail = `demo-${Date.now()}@puma-health.local`;
+    const timestamp = Date.now();
+    const demoEmail = `demouser${timestamp}@test.com`;
     const demoPassword = 'DemoUser123!';
 
-    return this.signUp({
-      email: demoEmail,
-      password: demoPassword,
-      fullName: 'Demo User',
-      age: 30,
-      gender: 'other',
-      medicalConditions: [],
-      medications: []
-    });
+    try {
+      // Use service client for demo user creation to bypass some restrictions
+      const { data: authData, error: authError } = await supabaseService['serviceSupabase'].auth.admin.createUser({
+        email: demoEmail,
+        password: demoPassword,
+        email_confirm: true, // Auto-confirm email for demo users
+        user_metadata: {
+          full_name: 'Demo User'
+        }
+      });
+
+      if (authError || !authData.user) {
+        logger.error('Error creating demo user:', authError);
+        // Fallback to regular signup
+        return this.signUp({
+          email: demoEmail,
+          password: demoPassword,
+          fullName: 'Demo User',
+          age: 30,
+          gender: 'other',
+          medicalConditions: [],
+          medications: []
+        });
+      }
+
+      // Create user profile
+      const profile = await supabaseService.createUserProfile(authData.user, {
+        full_name: 'Demo User',
+        age: 30,
+        gender: 'other',
+        medical_conditions: [],
+        medications: []
+      });
+
+      // Generate session tokens
+      const { data: sessionData, error: sessionError } = await supabaseService['supabase'].auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword
+      });
+
+      if (sessionError || !sessionData.session) {
+        logger.error('Error creating demo session:', sessionError);
+        throw sessionError || new Error('Failed to create demo session');
+      }
+
+      logger.info(`Demo user created: ${demoEmail}`);
+
+      return {
+        user: authData.user,
+        profile,
+        accessToken: sessionData.session.access_token,
+        refreshToken: sessionData.session.refresh_token
+      };
+
+    } catch (error) {
+      logger.error('Error in demo user creation, falling back to regular signup:', error);
+      // Fallback to regular signup
+      return this.signUp({
+        email: demoEmail,
+        password: demoPassword,
+        fullName: 'Demo User',
+        age: 30,
+        gender: 'other',
+        medicalConditions: [],
+        medications: []
+      });
+    }
   }
 
   // Analytics helpers

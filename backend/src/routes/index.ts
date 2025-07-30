@@ -4,15 +4,91 @@ import { ColorClassificationService } from '../services/ColorClassificationServi
 import { DataProcessingService } from '../services/DataProcessingService';
 import { ApiResponse } from '../types';
 import { logger } from '../utils/logger';
+import authRoutes from './auth';
+import analyticsRoutes from './analytics';
 
 interface Services {
   dbService: DatabaseService;
   colorService: ColorClassificationService;
   processingService: DataProcessingService;
+  serialService?: any; // Add serial service for manual readings
 }
 
 export function setupRoutes(app: Express, services: Services): void {
-  const { dbService, colorService, processingService } = services;
+  const { dbService, colorService, processingService, serialService } = services;
+
+  // Mount authentication routes
+  app.use('/api/auth', authRoutes);
+  
+  // Mount analytics routes
+  app.use('/api/analytics', analyticsRoutes);
+
+  // Trigger comprehensive manual sensor reading
+  app.post('/api/readings/manual', async (req: Request, res: Response) => {
+    try {
+      if (!serialService) {
+        const response: ApiResponse = {
+          success: false,
+          error: 'Serial service not available',
+          timestamp: new Date().toISOString()
+        };
+        return res.status(503).json(response);
+      }
+
+      // Extract user ID from Authorization header
+      const authHeader = req.headers.authorization;
+      let userId: string | undefined;
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          // TODO: Implement proper JWT verification to extract user ID
+          // For now, we'll extract from request body or use a demo user
+          userId = req.body.userId || 'demo-user-' + Date.now();
+          logger.info('Manual reading requested by user:', userId);
+        } catch (authError) {
+          logger.warn('Failed to extract user ID from token:', authError);
+          userId = 'anonymous-user-' + Date.now();
+        }
+      } else {
+        // No auth header - use demo/anonymous user
+        userId = 'demo-user-' + Date.now();
+        logger.info('Manual reading requested without authentication, using demo user:', userId);
+      }
+
+      // Trigger comprehensive manual reading
+      const result = await serialService.triggerManualReading(userId);
+      
+      if (result.success) {
+        const response: ApiResponse = {
+          success: true,
+          data: {
+            message: 'Manual reading completed successfully',
+            readingData: result.data,
+            collectionTime: '5 seconds',
+            processedBy: 'k-means algorithm'
+          },
+          timestamp: new Date().toISOString()
+        };
+        res.json(response);
+      } else {
+        const response: ApiResponse = {
+          success: false,
+          error: result.error || 'Manual reading failed',
+          timestamp: new Date().toISOString()
+        };
+        res.status(500).json(response);
+      }
+      
+    } catch (error) {
+      logger.error('Error in manual reading endpoint:', error);
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to process manual reading request',
+        timestamp: new Date().toISOString()
+      };
+      res.status(500).json(response);
+    }
+  });
 
   // Get latest reading
   app.get('/api/readings/latest', async (req: Request, res: Response) => {

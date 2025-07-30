@@ -3,6 +3,7 @@ import { ReadlineParser } from '@serialport/parser-readline';
 import { ArduinoData, RGBColor, SerialConfig } from '../types';
 import { logger } from '../utils/logger';
 import { DataProcessingService } from './DataProcessingService';
+import { ColorClassificationService } from './ColorClassificationService';
 
 export class SerialService {
   private port: SerialPort | null = null;
@@ -12,7 +13,10 @@ export class SerialService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 5000; // 5 seconds
 
-  constructor(private dataProcessor: DataProcessingService) {
+  constructor(
+    private dataProcessor: DataProcessingService,
+    private colorService: ColorClassificationService
+  ) {
     this.config = {
       port: process.env.ARDUINO_PORT || 'COM3', // Default Windows port
       baudRate: parseInt(process.env.ARDUINO_BAUD_RATE || '9600'),
@@ -22,7 +26,11 @@ export class SerialService {
 
   async initialize(): Promise<void> {
     // In development, check environment first
-    if (process.env.NODE_ENV === 'development') {
+    logger.info(`NODE_ENV: "${process.env.NODE_ENV}"`);
+    logger.info(`NODE_ENV type: ${typeof process.env.NODE_ENV}`);
+    logger.info(`NODE_ENV === 'development': ${process.env.NODE_ENV === 'development'}`);
+    
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV?.trim() === 'development') {
       logger.info('Development mode detected - checking Arduino connection...');
       
       try {
@@ -34,8 +42,9 @@ export class SerialService {
         logger.info(`Serial service initialized on port ${this.config.port}`);
         return;
       } catch (error) {
-        logger.warn('Arduino connection failed in development mode, using mock data:', error);
+        logger.warn('Arduino connection failed in development mode, switching to mock data:', error);
         this.startMockDataGeneration();
+        logger.info('Mock data generation started - SerialService initialized successfully');
         return;
       }
     }
@@ -356,6 +365,292 @@ export class SerialService {
       port: this.config.port,
       baudRate: this.config.baudRate
     };
+  }
+
+  /**
+   * Trigger a comprehensive manual sensor reading with 5-second data collection
+   * @param userId - The authenticated user's ID for data storage
+   * @returns Promise with the processed reading result
+   */
+  async triggerManualReading(userId?: string): Promise<{
+    success: boolean;
+    data?: {
+      averagedReading: ArduinoData;
+      colorScore: number;
+      confidence: number;
+      recommendations: string[];
+      readingId?: string;
+    };
+    error?: string;
+  }> {
+    logger.info('Comprehensive manual reading triggered', { userId });
+    
+    try {
+      // Step 1: Check Arduino device connection
+      const isConnected = await this.checkArduinoConnection();
+      logger.info(`Arduino connection status: ${isConnected ? 'Connected' : 'Disconnected'}`);
+      
+      // Step 2: Collect readings for 5 seconds
+      const readings = await this.collectReadingsFor5Seconds(isConnected);
+      
+      if (readings.length === 0) {
+        return {
+          success: false,
+          error: 'No readings collected during 5-second period'
+        };
+      }
+      
+      logger.info(`Collected ${readings.length} readings over 5 seconds`);
+      
+      // Step 3: Average the collected data
+      const averagedReading = this.averageReadings(readings);
+      logger.info('Averaged reading:', averagedReading);
+      
+      // Step 4: Process through k-means algorithm and get rating
+      const colorResult = this.colorService.classifyColor(averagedReading.color);
+      logger.info(`K-means classification: Score=${colorResult.score}, Confidence=${colorResult.confidence.toFixed(3)}`);
+      
+      // Step 5: Get health recommendations
+      const recommendations = this.colorService.getHealthRecommendations(colorResult.score);
+      
+      // Step 6: Store in Supabase with userId and date
+      const readingId = await this.storeProcessedReading(averagedReading, colorResult, userId, recommendations);
+      
+      logger.info(`Manual reading completed successfully. Reading ID: ${readingId}`);
+      
+      return {
+        success: true,
+        data: {
+          averagedReading,
+          colorScore: colorResult.score,
+          confidence: colorResult.confidence,
+          recommendations,
+          readingId
+        }
+      };
+      
+    } catch (error) {
+      logger.error('Error in comprehensive manual reading:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
+   * Check if Arduino device is properly connected
+   */
+  private async checkArduinoConnection(): Promise<boolean> {
+    if (!this.port) {
+      return false;
+    }
+    
+    try {
+      return this.port.isOpen;
+    } catch (error) {
+      logger.warn('Error checking Arduino connection:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Collect multiple readings over a 5-second period
+   */
+  private async collectReadingsFor5Seconds(isConnected: boolean): Promise<ArduinoData[]> {
+    const readings: ArduinoData[] = [];
+    const startTime = Date.now();
+    const duration = 5000; // 5 seconds
+    const targetReadings = 10; // Aim for ~2 readings per second
+    
+    logger.info('Starting 5-second data collection...');
+    
+    if (isConnected && this.port?.isOpen) {
+      // Real Arduino data collection
+      return new Promise((resolve) => {
+        const tempReadings: ArduinoData[] = [];
+        
+        const dataHandler = (data: Buffer) => {
+          const parsed = this.parseArduinoData(data.toString());
+          if (parsed) {
+            tempReadings.push(parsed);
+            logger.debug(`Reading ${tempReadings.length}: pH=${parsed.ph.toFixed(2)}, RGB=(${parsed.color.r},${parsed.color.g},${parsed.color.b})`);
+          }
+        };
+        
+        // Add temporary data handler
+        this.port!.on('data', dataHandler);
+        
+        // Request continuous readings
+        const readingInterval = setInterval(() => {
+          if (this.port?.isOpen) {
+            this.port.write('READ\n');
+          }
+        }, 500); // Request reading every 500ms
+        
+        // Stop after 5 seconds
+        setTimeout(() => {
+          clearInterval(readingInterval);
+          this.port!.removeListener('data', dataHandler);
+          logger.info(`Collected ${tempReadings.length} real Arduino readings`);
+          resolve(tempReadings);
+        }, duration);
+      });
+    } else {
+      // Mock data collection for development
+      for (let i = 0; i < targetReadings; i++) {
+        const mockReading = this.generateSingleMockReadingData();
+        readings.push(mockReading);
+        
+        logger.debug(`Mock reading ${i + 1}: pH=${mockReading.ph.toFixed(2)}, RGB=(${mockReading.color.r},${mockReading.color.g},${mockReading.color.b})`);
+        
+        // Small delay to simulate real timing
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      logger.info(`Generated ${readings.length} mock readings`);
+    }
+    
+    return readings;
+  }
+
+  /**
+   * Average multiple readings into a single representative reading
+   */
+  private averageReadings(readings: ArduinoData[]): ArduinoData {
+    if (readings.length === 0) {
+      throw new Error('Cannot average empty readings array');
+    }
+    
+    const avgPh = readings.reduce((sum, r) => sum + r.ph, 0) / readings.length;
+    const avgR = Math.round(readings.reduce((sum, r) => sum + r.color.r, 0) / readings.length);
+    const avgG = Math.round(readings.reduce((sum, r) => sum + r.color.g, 0) / readings.length);
+    const avgB = Math.round(readings.reduce((sum, r) => sum + r.color.b, 0) / readings.length);
+    
+    const averagedReading: ArduinoData = {
+      ph: Math.round(avgPh * 100) / 100, // Round to 2 decimal places
+      color: {
+        r: Math.max(0, Math.min(255, avgR)),
+        g: Math.max(0, Math.min(255, avgG)),
+        b: Math.max(0, Math.min(255, avgB))
+      },
+      timestamp: Date.now()
+    };
+    
+    logger.info(`Averaged ${readings.length} readings: pH=${averagedReading.ph}, RGB=(${averagedReading.color.r},${averagedReading.color.g},${averagedReading.color.b})`);
+    
+    return averagedReading;
+  }
+
+  /**
+   * Store the processed reading with full context
+   */
+  private async storeProcessedReading(
+    reading: ArduinoData, 
+    colorResult: any, 
+    userId?: string, 
+    recommendations?: string[]
+  ): Promise<string | undefined> {
+    try {
+      // Use the existing data processor with user context
+      await this.dataProcessor.processArduinoData(reading, userId);
+      
+      // Return a simple identifier
+      return `manual_${Date.now()}`;
+    } catch (error) {
+      logger.error('Error storing processed reading:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate a single mock reading (enhanced for manual reading)
+   */
+  private generateSingleMockReadingData(): ArduinoData {
+    // More realistic scenarios for manual testing
+    const scenarios = [
+      // Healthy pale yellow (good hydration)
+      { r: 45000, g: 50000, b: 20000, c: 55000, ph: 6.0 + Math.random() * 1.5 },
+      // Normal yellow 
+      { r: 40000, g: 45000, b: 15000, c: 50000, ph: 6.5 + Math.random() * 1.0 },
+      // Dark yellow (mild dehydration)
+      { r: 35000, g: 38000, b: 12000, c: 45000, ph: 7.0 + Math.random() * 0.8 },
+      // Amber (concerning)
+      { r: 30000, g: 32000, b: 8000, c: 40000, ph: 7.5 + Math.random() * 0.6 },
+      // Dark amber/brown (critical)
+      { r: 25000, g: 20000, b: 5000, c: 35000, ph: 8.0 + Math.random() * 0.5 }
+    ];
+
+    // Weighted selection toward healthier readings
+    const weights = [0.4, 0.3, 0.15, 0.1, 0.05];
+    let random = Math.random();
+    let selectedScenario = scenarios[0];
+    
+    for (let i = 0; i < weights.length; i++) {
+      if (random < weights.slice(0, i + 1).reduce((a, b) => a + b, 0)) {
+        selectedScenario = scenarios[i];
+        break;
+      }
+    }
+
+    // Add realistic noise variation
+    const noiseLevel = 0.1;
+    return {
+      ph: Math.max(4.0, Math.min(9.0, selectedScenario.ph + (Math.random() - 0.5) * noiseLevel)),
+      color: {
+        r: Math.max(0, Math.min(255, Math.round(selectedScenario.r / 256) + (Math.random() - 0.5) * 10)),
+        g: Math.max(0, Math.min(255, Math.round(selectedScenario.g / 256) + (Math.random() - 0.5) * 10)), 
+        b: Math.max(0, Math.min(255, Math.round(selectedScenario.b / 256) + (Math.random() - 0.5) * 10))
+      },
+      timestamp: Date.now()
+    };
+  }
+
+  /**
+   * Generate a single mock reading for development/testing
+   */
+  private generateSingleMockReading(): void {
+    logger.info('Generating single mock reading');
+    
+    // Simulate TCS34725 sensor readings - similar to automatic generation but single reading
+    const scenarios = [
+      // Healthy pale yellow (good hydration)
+      { r: 45000, g: 50000, b: 20000, c: 55000, ph: 6.0 + Math.random() * 1.5 },
+      // Normal yellow 
+      { r: 40000, g: 45000, b: 15000, c: 50000, ph: 6.5 + Math.random() * 1.0 },
+      // Dark yellow (mild dehydration)
+      { r: 35000, g: 38000, b: 12000, c: 45000, ph: 7.0 + Math.random() * 0.8 },
+      // Amber (concerning)
+      { r: 30000, g: 32000, b: 8000, c: 40000, ph: 7.5 + Math.random() * 0.6 },
+      // Dark amber/brown (critical)
+      { r: 25000, g: 20000, b: 5000, c: 35000, ph: 8.0 + Math.random() * 0.5 }
+    ];
+
+    // Randomly select a scenario (weighted toward healthier readings)
+    const weights = [0.4, 0.3, 0.15, 0.1, 0.05]; // 40% healthy, 30% normal, etc.
+    let random = Math.random();
+    let selectedScenario = scenarios[0];
+    
+    for (let i = 0; i < weights.length; i++) {
+      if (random < weights.slice(0, i + 1).reduce((a, b) => a + b, 0)) {
+        selectedScenario = scenarios[i];
+        break;
+      }
+    }
+
+    // Add some noise to the selected scenario
+    const mockData: ArduinoData = {
+      ph: Math.max(4.0, Math.min(9.0, selectedScenario.ph + (Math.random() - 0.5) * 0.2)),
+      color: {
+        r: Math.max(0, Math.min(255, Math.round(selectedScenario.r / 256))),
+        g: Math.max(0, Math.min(255, Math.round(selectedScenario.g / 256))),
+        b: Math.max(0, Math.min(255, Math.round(selectedScenario.b / 256)))
+      },
+      timestamp: Date.now()
+    };
+
+    // Process the mock data
+    this.dataProcessor.processArduinoData(mockData);
+    logger.info(`Manual mock reading generated: pH=${mockData.ph.toFixed(2)}, RGB=(${mockData.color.r},${mockData.color.g},${mockData.color.b})`);
   }
 
   async close(): Promise<void> {

@@ -3,8 +3,12 @@ import { inter } from '@/app/ui/fonts'
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'PUMA Dashboard',
-  viewport: 'width=device-width, initial-scale=1'
+  title: 'PUMA Dashboard'
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1
 }
 
 export default function RootLayout({

@@ -444,4 +444,21 @@ export class SupabaseService {
   }
 }
 
-export const supabaseService = new SupabaseService(); 
+// Lazy initialization to ensure env vars are loaded first
+let _supabaseService: SupabaseService | null = null;
+
+export function getSupabaseService(): SupabaseService {
+  if (!_supabaseService) {
+    _supabaseService = new SupabaseService();
+  }
+  return _supabaseService;
+}
+
+// For backward compatibility, create a proxy that initializes lazily
+export const supabaseService = new Proxy({} as SupabaseService, {
+  get(target, prop) {
+    const service = getSupabaseService();
+    const value = (service as any)[prop];
+    return typeof value === 'function' ? value.bind(service) : value;
+  }
+}); 
