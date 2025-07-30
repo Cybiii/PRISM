@@ -9,7 +9,7 @@ PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monit
 - **Design Assistant**: [Sebastian Silva](https://github.com/Cybiii)
 - **Fullstack development**: [Nathan Tam](https://github.com/nathandtam)
 - **Hardware/Electrical Engineering**: Edmond Ter Pogosyan
-- **Technical Research & Analysish**: Anchita Ganesh
+- **Technical Research & Analysis**: Anchita Ganesh
 - **CAD Modeling & Prototyping**: Ernesto Tellez Perez & Connor McVicker
 
 
