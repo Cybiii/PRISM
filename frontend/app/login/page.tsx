@@ -125,54 +125,28 @@ export default function Login() {
     visible: {
       opacity: 1,
       transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
+        duration: 0.3,
+        staggerChildren: 0.05
       }
     }
   }
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: { y: 10, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
-      transition: { duration: 0.5 }
-    }
-  }
-
-  const floatingVariants = {
-    float: {
-      y: [0, -10, 0],
-      rotate: [0, 5, 0],
-      transition: {
-        duration: 4,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
+      transition: { duration: 0.3 }
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center p-4 md:p-6 lg:p-8">
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          variants={floatingVariants}
-          animate="float"
-          className="absolute top-20 left-20 w-20 h-20 bg-blue-200 rounded-full opacity-20"
-        />
-        <motion.div
-          variants={floatingVariants}
-          animate="float"
-          style={{ animationDelay: '1s' }}
-          className="absolute top-40 right-32 w-16 h-16 bg-purple-200 rounded-full opacity-20"
-        />
-        <motion.div
-          variants={floatingVariants}
-          animate="float"
-          style={{ animationDelay: '2s' }}
-          className="absolute bottom-32 left-32 w-24 h-24 bg-indigo-200 rounded-full opacity-20"
-        />
+        <div className="absolute top-20 left-20 w-20 h-20 bg-blue-200 rounded-full opacity-10" />
+        <div className="absolute top-40 right-32 w-16 h-16 bg-purple-200 rounded-full opacity-10" />
+        <div className="absolute bottom-32 left-32 w-24 h-24 bg-indigo-200 rounded-full opacity-10" />
       </div>
 
       <motion.div
@@ -225,9 +199,9 @@ export default function Login() {
         {/* Login Card */}
         <motion.div 
           variants={itemVariants}
-          className="bg-white/90 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-gray-100"
+          className="bg-white/90 backdrop-blur-lg rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-xl border border-gray-100"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+                      <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -237,14 +211,14 @@ export default function Login() {
                 whileFocus={{ scale: 1.02 }}
                 className="relative"
               >
-                <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                  className="w-full pl-9 md:pl-10 pr-4 py-3 md:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-base"
                   placeholder="Enter your email"
                 />
               </motion.div>
@@ -259,25 +233,25 @@ export default function Login() {
                 whileFocus={{ scale: 1.02 }}
                 className="relative"
               >
-                <LockClosedIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <LockClosedIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                  className="w-full pl-9 md:pl-10 pr-11 md:pr-12 py-3 md:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-base"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-manipulation"
                 >
                   {showPassword ? (
-                    <EyeSlashIcon className="w-5 h-5" />
+                    <EyeSlashIcon className="w-4 h-4 md:w-5 md:h-5" />
                   ) : (
-                    <EyeIcon className="w-5 h-5" />
+                    <EyeIcon className="w-4 h-4 md:w-5 md:h-5" />
                   )}
                 </button>
               </motion.div>
@@ -303,7 +277,7 @@ export default function Login() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 md:py-3 rounded-lg md:rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-base"
             >
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -329,15 +303,15 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Demo Button */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={loading}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all duration-200 border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                         {/* Demo Button */}
+             <motion.button
+               whileHover={{ scale: 1.02 }}
+               whileTap={{ scale: 0.98 }}
+               type="button"
+               onClick={handleDemoLogin}
+               disabled={loading}
+               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 md:py-3 rounded-lg md:rounded-xl transition-all duration-200 border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-base"
+             >
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <motion.div

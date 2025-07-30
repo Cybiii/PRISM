@@ -34,7 +34,8 @@ export default function Dashboard() {
   const [isReading, setIsReading] = useState(false)
   const [lastReadingTime, setLastReadingTime] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'unknown'>('unknown')
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState<string>('')
+  const [mounted, setMounted] = useState(false)
 
   const todayStr = useMemo(() => {
     return new Date().toLocaleDateString('en-US', {
@@ -45,9 +46,15 @@ export default function Dashboard() {
     })
   }, [])
 
-  // Update time every second
+  // Handle client-side mounting and time updates
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    setMounted(true)
+    setCurrentTime(new Date().toLocaleTimeString())
+    
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString())
+    }, 1000)
+    
     return () => clearInterval(timer)
   }, [])
 
@@ -161,10 +168,10 @@ export default function Dashboard() {
       variants={containerVariants}
       className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"
     >
-      {/* Header */}
+            {/* Desktop Header - Hidden on Mobile */}
       <motion.header 
         variants={itemVariants}
-        className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50"
+        className="hidden md:block bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -181,8 +188,8 @@ export default function Dashboard() {
                   PUMA Health
                 </h1>
                 <p className="text-sm text-gray-500">Intelligent Health Monitoring</p>
-        </div>
-      </div>
+              </div>
+            </div>
 
             <div className="flex items-center space-x-6">
               {/* Connection Status */}
@@ -208,7 +215,7 @@ export default function Dashboard() {
                   <p className="text-sm font-medium text-gray-900">
                     {userProfile?.full_name || 'User'}
                   </p>
-                  <p className="text-xs text-gray-500">{currentTime.toLocaleTimeString()}</p>
+                  <p className="text-xs text-gray-500">{mounted ? currentTime : '--:--:-- --'}</p>
                 </div>
                 <UserCircleIcon className="w-8 h-8 text-gray-400" />
               </div>
@@ -227,39 +234,39 @@ export default function Dashboard() {
         </div>
       </motion.header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
         {/* Welcome Section */}
-        <motion.div variants={itemVariants} className="mb-8">
+        <motion.div variants={itemVariants} className="mb-6 md:mb-8">
           <div className="text-center">
             <motion.h2 
-              className="text-3xl font-bold text-gray-900 mb-2"
+              className="text-2xl md:text-3xl font-bold text-gray-900 mb-2"
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5 }}
             >
               Welcome back, {userProfile?.full_name?.split(' ')[0] || 'User'}! 👋
             </motion.h2>
-            <p className="text-gray-600">{todayStr}</p>
-      </div>
+            <p className="text-sm md:text-base text-gray-600">{todayStr}</p>
+          </div>
         </motion.div>
 
         {/* Health Metrics Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8 mb-6 md:mb-8">
           {/* Hydration Monitor */}
           <motion.div 
             variants={itemVariants}
             whileHover={{ y: -5 }}
-            className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-gray-100"
+            className="bg-white/80 backdrop-blur-lg rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-xl border border-gray-100"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                  <HeartIcon className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                  <HeartIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-800">Hydration Level</h3>
-                  <p className="text-sm text-gray-500">Real-time monitoring</p>
+                  <h3 className="text-lg md:text-xl font-semibold text-gray-800">Hydration Level</h3>
+                  <p className="text-xs md:text-sm text-gray-500">Real-time monitoring</p>
                 </div>
               </div>
               <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
@@ -271,16 +278,16 @@ export default function Dashboard() {
           <motion.div 
             variants={itemVariants}
             whileHover={{ y: -5 }}
-            className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-gray-100"
+            className="bg-white/80 backdrop-blur-lg rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-xl border border-gray-100"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <ChartBarIcon className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <ChartBarIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-800">pH Balance</h3>
-                  <p className="text-sm text-gray-500">Acidity monitoring</p>
+                  <h3 className="text-lg md:text-xl font-semibold text-gray-800">pH Balance</h3>
+                  <p className="text-xs md:text-sm text-gray-500">Acidity monitoring</p>
                 </div>
               </div>
               <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse" />
@@ -292,21 +299,21 @@ export default function Dashboard() {
         {/* Analysis Section */}
         <motion.div 
           variants={itemVariants}
-          className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-gray-100 mb-8"
+          className="bg-white/80 backdrop-blur-lg rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-xl border border-gray-100 mb-6 md:mb-8"
         >
           <div className="text-center">
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
-              className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6"
             >
-              <SparklesIcon className="w-8 h-8 text-white" />
+              <SparklesIcon className="w-6 h-6 md:w-8 md:h-8 text-white" />
             </motion.div>
             
-            <h3 className="text-2xl font-bold text-gray-800 mb-3">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">
               Comprehensive Health Analysis
             </h3>
-            <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-sm md:text-base text-gray-600 mb-6 md:mb-8 max-w-2xl mx-auto px-2">
               Advanced 5-second sensor collection with K-means machine learning classification. 
               Get instant health insights with personalized recommendations.
             </p>
@@ -317,7 +324,7 @@ export default function Dashboard() {
               whileTap={{ scale: 0.95 }}
               onClick={handleManualReading}
               disabled={isReading || connectionStatus === 'disconnected'}
-              className={`relative inline-flex items-center px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-300 ${
+              className={`relative inline-flex items-center px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-semibold text-base md:text-lg transition-all duration-300 w-full sm:w-auto ${
                 isReading || connectionStatus === 'disconnected'
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
@@ -380,78 +387,78 @@ export default function Dashboard() {
               )}
             </AnimatePresence>
 
-            {/* Process Flow */}
-            <div className="mt-8 bg-gray-50 rounded-2xl p-6">
-              <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center justify-center space-x-2">
-                <ClockIcon className="w-4 h-4" />
+                        {/* Process Flow */}
+            <div className="mt-6 md:mt-8 bg-gray-50 rounded-xl md:rounded-2xl p-4 md:p-6">
+              <h4 className="text-xs md:text-sm font-semibold text-gray-700 mb-3 md:mb-4 flex items-center justify-center space-x-2">
+                <ClockIcon className="w-3 h-3 md:w-4 md:h-4" />
                 <span>Analysis Process</span>
               </h4>
-              <div className="flex items-center justify-center space-x-4 text-xs text-gray-600">
-                <div className="flex items-center space-x-1">
+              <div className="flex items-center justify-center space-x-2 md:space-x-4 text-xs text-gray-600">
+                <div className="flex flex-col items-center space-y-1 md:flex-row md:space-y-0 md:space-x-1">
                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Connection Check</span>
+                  <span className="text-center">Connection Check</span>
                 </div>
-                <div className="w-4 h-px bg-gray-300"></div>
-                <div className="flex items-center space-x-1">
+                <div className="w-2 md:w-4 h-px bg-gray-300"></div>
+                <div className="flex flex-col items-center space-y-1 md:flex-row md:space-y-0 md:space-x-1">
                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>5s Collection</span>
+                  <span className="text-center">5s Collection</span>
                 </div>
-                <div className="w-4 h-px bg-gray-300"></div>
-                <div className="flex items-center space-x-1">
+                <div className="w-2 md:w-4 h-px bg-gray-300"></div>
+                <div className="flex flex-col items-center space-y-1 md:flex-row md:space-y-0 md:space-x-1">
                   <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span>ML Processing</span>
+                  <span className="text-center">ML Processing</span>
                 </div>
-                <div className="w-4 h-px bg-gray-300"></div>
-                <div className="flex items-center space-x-1">
+                <div className="w-2 md:w-4 h-px bg-gray-300"></div>
+                <div className="flex flex-col items-center space-y-1 md:flex-row md:space-y-0 md:space-x-1">
                   <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                  <span>Storage</span>
+                  <span className="text-center">Storage</span>
                 </div>
-        </div>
-      </div>
+              </div>
+            </div>
     </div>
         </motion.div>
 
         {/* Quick Stats */}
         <motion.div 
           variants={itemVariants}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 lg:gap-6"
         >
           <motion.div 
             whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 text-white"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100">Daily Readings</p>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-blue-100 text-xs md:text-sm">Daily Readings</p>
+                <p className="text-xl md:text-2xl font-bold">12</p>
               </div>
-              <ChartBarIcon className="w-8 h-8 opacity-80" />
+              <ChartBarIcon className="w-6 h-6 md:w-8 md:h-8 opacity-80" />
             </div>
           </motion.div>
 
           <motion.div 
             whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white"
+            className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 text-white"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100">Health Score</p>
-                <p className="text-2xl font-bold">Good</p>
+                <p className="text-green-100 text-xs md:text-sm">Health Score</p>
+                <p className="text-xl md:text-2xl font-bold">Good</p>
               </div>
-              <HeartIcon className="w-8 h-8 opacity-80" />
+              <HeartIcon className="w-6 h-6 md:w-8 md:h-8 opacity-80" />
             </div>
           </motion.div>
 
           <motion.div 
             whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-6 text-white"
+            className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 text-white sm:col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100">Streak</p>
-                <p className="text-2xl font-bold">7 days</p>
+                <p className="text-purple-100 text-xs md:text-sm">Streak</p>
+                <p className="text-xl md:text-2xl font-bold">7 days</p>
               </div>
-              <SparklesIcon className="w-8 h-8 opacity-80" />
+              <SparklesIcon className="w-6 h-6 md:w-8 md:h-8 opacity-80" />
             </div>
           </motion.div>
         </motion.div>

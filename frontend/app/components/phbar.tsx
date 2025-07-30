@@ -172,20 +172,20 @@ export default function PhBar() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: "spring" }}
-            className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg md:rounded-xl flex items-center justify-center"
           >
-            <StatusIcon className="w-6 h-6 text-white" />
+            <StatusIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </motion.div>
           <div>
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.5, type: "spring" }}
-              className="text-4xl font-bold text-gray-800"
+              className="text-3xl md:text-4xl font-bold text-gray-800"
             >
               {phLevel.toFixed(1)}
             </motion.div>
-            <div className="text-sm text-gray-600">pH Level</div>
+            <div className="text-xs md:text-sm text-gray-600">pH Level</div>
           </div>
         </div>
       </motion.div>
@@ -248,8 +248,8 @@ export default function PhBar() {
         transition={{ delay: 1.2 }}
         className="text-center"
       >
-        <div className={`p-4 rounded-2xl bg-gradient-to-r ${status.bgColor} text-white mb-4`}>
-          <p className="font-medium">{getPhMessage(phLevel)}</p>
+        <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-r ${status.bgColor} text-white mb-3 md:mb-4`}>
+          <p className="font-medium text-sm md:text-base">{getPhMessage(phLevel)}</p>
         </div>
 
         {/* pH Facts */}
@@ -257,27 +257,27 @@ export default function PhBar() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5 }}
-          className="bg-gray-50 rounded-xl p-4"
+          className="bg-gray-50 rounded-lg md:rounded-xl p-3 md:p-4"
         >
-          <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center justify-center space-x-2">
-            <InformationCircleIcon className="w-4 h-4" />
+          <h4 className="text-xs md:text-sm font-semibold text-gray-700 mb-2 md:mb-3 flex items-center justify-center space-x-2">
+            <InformationCircleIcon className="w-3 h-3 md:w-4 md:h-4" />
             <span>pH Scale Guide</span>
           </h4>
-          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-emerald-400 rounded-full flex-shrink-0"></div>
               <span>6.0-7.5: Optimal</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></div>
               <span>4.5-8.0: Normal</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-orange-400 rounded-full flex-shrink-0"></div>
               <span>&lt;4.5: Too Acidic</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-purple-400 rounded-full flex-shrink-0"></div>
               <span>&gt;8.0: Too Alkaline</span>
             </div>
           </div>
@@ -289,14 +289,14 @@ export default function PhBar() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.8 }}
-        className="grid grid-cols-2 gap-4"
+        className="grid grid-cols-2 gap-3 md:gap-4"
       >
-        <div className="bg-white border border-gray-200 rounded-xl p-3 text-center">
-          <div className="text-lg font-bold text-gray-800 capitalize">{status.status}</div>
+        <div className="bg-white border border-gray-200 rounded-lg md:rounded-xl p-2 md:p-3 text-center">
+          <div className="text-base md:text-lg font-bold text-gray-800 capitalize">{status.status}</div>
           <div className="text-xs text-gray-600">pH Status</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-3 text-center">
-          <div className="text-lg font-bold text-gray-800">{data.colorScore}/5</div>
+        <div className="bg-white border border-gray-200 rounded-lg md:rounded-xl p-2 md:p-3 text-center">
+          <div className="text-base md:text-lg font-bold text-gray-800">{data.colorScore}/5</div>
           <div className="text-xs text-gray-600">Color Score</div>
         </div>
       </motion.div>

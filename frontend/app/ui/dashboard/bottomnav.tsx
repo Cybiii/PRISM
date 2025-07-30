@@ -72,23 +72,12 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   const containerVariants = {
-    hidden: { y: 100, opacity: 0 },
+    hidden: { opacity: 0 },
     visible: {
-      y: 0,
       opacity: 1,
       transition: {
-        duration: 0.5,
-        staggerChildren: 0.1
+        duration: 0.3
       }
-    }
-  }
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.3 }
     }
   }
 
@@ -109,9 +98,8 @@ export default function BottomNav() {
           const Icon = isActive ? item.activeIcon : item.icon
 
           return (
-            <motion.div
+            <div
               key={item.name}
-              variants={itemVariants}
               className="relative"
             >
               <Link href={item.href}>
@@ -217,7 +205,7 @@ export default function BottomNav() {
                   />
                 </motion.div>
               </Link>
-            </motion.div>
+            </div>
           )
         })}
       </div>

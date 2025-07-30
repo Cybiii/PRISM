@@ -68,17 +68,17 @@ export default function NavLinks() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
+        staggerChildren: 0.05
       }
     }
   }
 
   const itemVariants = {
-    hidden: { x: -20, opacity: 0 },
+    hidden: { x: -10, opacity: 0 },
     visible: {
       x: 0,
       opacity: 1,
-      transition: { duration: 0.3 }
+      transition: { duration: 0.2 }
     }
   }
 

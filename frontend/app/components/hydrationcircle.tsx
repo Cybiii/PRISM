@@ -148,7 +148,7 @@ export default function HydrationCircle() {
         className="relative"
       >
         {/* Background Circle */}
-        <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 160 160">
+        <svg className="w-36 h-36 md:w-48 md:h-48 transform -rotate-90" viewBox="0 0 160 160">
           {/* Background track */}
           <circle
             cx="80"
@@ -227,18 +227,18 @@ export default function HydrationCircle() {
         transition={{ delay: 1 }}
         className="text-center max-w-xs"
       >
-        <div className={`p-4 rounded-2xl bg-gradient-to-r ${status.bgColor} text-white`}>
-          <p className="font-medium">{getStatusMessage(hydrationLevel)}</p>
+        <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-r ${status.bgColor} text-white`}>
+          <p className="font-medium text-sm md:text-base">{getStatusMessage(hydrationLevel)}</p>
         </div>
         
         {/* Additional Stats */}
-        <div className="mt-4 grid grid-cols-2 gap-4 text-center">
-          <div className="bg-gray-50 rounded-xl p-3">
-            <div className="text-lg font-bold text-gray-800">{data.colorScore}/5</div>
+        <div className="mt-3 md:mt-4 grid grid-cols-2 gap-3 md:gap-4 text-center">
+          <div className="bg-gray-50 rounded-lg md:rounded-xl p-2 md:p-3">
+            <div className="text-base md:text-lg font-bold text-gray-800">{data.colorScore}/5</div>
             <div className="text-xs text-gray-600">Color Score</div>
           </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <div className="text-lg font-bold text-gray-800">{data.ph.toFixed(1)}</div>
+          <div className="bg-gray-50 rounded-lg md:rounded-xl p-2 md:p-3">
+            <div className="text-base md:text-lg font-bold text-gray-800">{data.ph.toFixed(1)}</div>
             <div className="text-xs text-gray-600">pH Level</div>
           </div>
         </div>

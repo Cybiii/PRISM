@@ -149,33 +149,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            rotate: [0, 5, 0],
-            opacity: [0.1, 0.2, 0.1]
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, -5, 0],
-            opacity: [0.1, 0.15, 0.1]
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 2
-          }}
-          className="absolute bottom-20 left-20 w-48 h-48 bg-gradient-to-r from-indigo-200 to-cyan-200 rounded-full blur-3xl"
-        />
+        <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-3xl opacity-5" />
+        <div className="absolute bottom-20 left-20 w-48 h-48 bg-gradient-to-r from-indigo-200 to-cyan-200 rounded-full blur-3xl opacity-5" />
       </div>
     </div>
   )
