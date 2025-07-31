@@ -99,7 +99,7 @@ export default function ProfilePage() {
         const mockUserData = {
           user: {
             id: 'demo-user-123',
-            email: 'demo@puma-health.com',
+            email: 'demo@prism-health.com',
             emailConfirmed: true
           },
           profile: {
@@ -475,7 +475,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white">
-                    {profile?.full_name || 'PUMA User'}
+                    {profile?.full_name || 'PRISM User'}
                   </h2>
                   <p className="text-blue-100 flex items-center">
                     <EnvelopeIcon className="w-4 h-4 mr-2" />

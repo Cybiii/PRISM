@@ -141,7 +141,7 @@ export default function SignupPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
             <span className="text-white font-bold text-xl">P</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">PUMA Health</h1>
+                      <h1 className="text-3xl font-bold text-gray-900 mb-2">PRISM Health</h1>
           <p className="text-gray-600">Create your health monitoring account</p>
         </div>
 
@@ -323,7 +323,7 @@ export default function SignupPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600">
-          <p>PUMA Health Monitor v1.0</p>
+                      <p>PRISM Health Monitor v1.0</p>
           <p>Secure health data analysis</p>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { inter } from '@/app/ui/fonts'
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'PUMA Dashboard'
+  title: 'PRISM Dashboard'
 }
 
 export const viewport = {

@@ -201,7 +201,7 @@ const WeeklyCharts: React.FC<ChartProps> = ({ width = 300, height = 150 }) => {
             {data.map((d, i) => {
               const x = (i / (data.length - 1)) * (width - 40) + 20
               const y = height - 40 - ((d.colorScore - 1) / 4) * (height - 60)
-              const color = d.colorScore <= 2 ? '#10b981' : 
+                              const color = d.colorScore >= 7 ? '#10b981' : 
                            d.colorScore <= 3 ? '#f59e0b' : '#ef4444'
               return (
                 <circle

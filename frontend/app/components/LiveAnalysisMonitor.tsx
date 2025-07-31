@@ -283,13 +283,13 @@ export default function LiveAnalysisMonitor() {
             </span>
           </div>
 
-          {/* Manual Trigger Button */}
+          {/* Manual Trigger Button - Huge on Mobile */}
           <button
             onClick={triggerManualAnalysis}
             disabled={!isConnected || isAnalyzing}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            className="w-full sm:w-auto px-8 py-6 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-2xl sm:rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start space-x-3 sm:space-x-2 text-xl sm:text-base font-bold sm:font-normal shadow-xl sm:shadow-none"
           >
-            <BeakerIcon className="w-4 h-4" />
+            <BeakerIcon className="w-8 h-8 sm:w-4 sm:h-4" />
             <span>{isAnalyzing ? 'Analyzing...' : 'Start Analysis'}</span>
           </button>
         </div>
@@ -405,11 +405,11 @@ export default function LiveAnalysisMonitor() {
         </div>
 
         {/* Current Data */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Current Reading Data - Cartoon Style */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold flex items-center">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 sm:p-6 text-white shadow-2xl">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-lg sm:text-2xl font-bold flex items-center">
                 <motion.div
                   animate={{ scale: [1, 1.1, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -421,36 +421,36 @@ export default function LiveAnalysisMonitor() {
               <motion.div
                 animate={{ rotate: [0, 10, -10, 0] }}
                 transition={{ duration: 3, repeat: Infinity }}
-                className="text-2xl"
+                className="text-xl sm:text-2xl"
               >
                 ✨
               </motion.div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* Fun Primary Metrics */}
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4">
                 {/* pH Level - Fun Card */}
               {currentData.ph && (
                   <motion.div
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30"
+                    className="bg-white/20 backdrop-blur rounded-2xl p-3 sm:p-4 border border-white/30"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <span className="text-2xl">⚗️</span>
-                        <span className="font-bold text-lg">pH Level</span>
+                        <span className="text-lg sm:text-2xl">⚗️</span>
+                        <span className="font-bold text-sm sm:text-lg">pH Level</span>
                       </div>
                       <div className="text-right">
-                        <div className="text-3xl font-black">{currentData.ph.toFixed(2)}</div>
-                        <div className="text-sm opacity-80">
+                        <div className="text-xl sm:text-3xl font-black">{currentData.ph.toFixed(2)}</div>
+                        <div className="text-xs sm:text-sm opacity-80">
                           {currentData.ph < 6.0 ? '🍋 Sour Zone!' : 
                            currentData.ph > 8.0 ? '🧂 Salty Zone!' : 
                            '🎯 Perfect Zone!'}
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm opacity-75">Normal Range: 6.0-8.0</div>
+                    <div className="text-xs sm:text-sm opacity-75">Normal Range: 6.0-8.0</div>
                   </motion.div>
                 )}
                 
@@ -458,22 +458,22 @@ export default function LiveAnalysisMonitor() {
                 {currentData.colorScore && (
                   <motion.div
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30"
+                    className="bg-white/20 backdrop-blur rounded-2xl p-3 sm:p-4 border border-white/30"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <span className="text-2xl">🏆</span>
-                        <span className="font-bold text-lg">Health Score</span>
+                        <span className="text-lg sm:text-2xl">🏆</span>
+                        <span className="font-bold text-sm sm:text-lg">Health Score</span>
                       </div>
                       <div className="text-right">
-                                              <div className="text-3xl font-black">{currentData.colorScore}/10</div>
-                      <div className="text-sm opacity-80">
-                        {currentData.colorScore >= 9 ? 'Superhero!' : 
-                         currentData.colorScore >= 7 ? 'Pretty Good!' : 
-                         currentData.colorScore >= 5 ? 'Getting There' : 
-                         currentData.colorScore >= 3 ? 'Needs Work' :
-                         'Need Help!'}
-                      </div>
+                        <div className="text-xl sm:text-3xl font-black">{currentData.colorScore}/10</div>
+                        <div className="text-xs sm:text-sm opacity-80">
+                          {currentData.colorScore >= 9 ? 'Superhero!' : 
+                           currentData.colorScore >= 7 ? 'Pretty Good!' : 
+                           currentData.colorScore >= 5 ? 'Getting There' : 
+                           currentData.colorScore >= 3 ? 'Needs Work' :
+                           'Need Help!'}
+                        </div>
                       </div>
                     </div>
                     <div className="text-sm opacity-75">Target: 8-10 for super powers!</div>

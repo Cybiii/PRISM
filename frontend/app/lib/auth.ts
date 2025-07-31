@@ -1,4 +1,4 @@
-// Authentication utilities for PUMA frontend
+// Authentication utilities for PRISM frontend
 
 export interface UserData {
   user: {
@@ -32,7 +32,13 @@ const API_BASE_URL = 'http://localhost:3001/api'
  */
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem(ACCESS_TOKEN_KEY)
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY)
+  console.log('🔍 getAccessToken:', { 
+    hasToken: !!token, 
+    length: token?.length || 0, 
+    preview: token ? `${token.substring(0, 20)}...` : 'null' 
+  })
+  return token
 }
 
 /**
@@ -40,7 +46,13 @@ export function getAccessToken(): string | null {
  */
 export function getRefreshToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
+  const token = localStorage.getItem(REFRESH_TOKEN_KEY)
+  console.log('🔍 getRefreshToken:', { 
+    hasToken: !!token, 
+    length: token?.length || 0, 
+    preview: token ? `${token.substring(0, 20)}...` : 'null' 
+  })
+  return token
 }
 
 /**
@@ -57,6 +69,20 @@ export function getUserData(): UserData | null {
  */
 export function storeAuthData(tokens: AuthTokens, userData: UserData): void {
   if (typeof window === 'undefined') return
+  
+  console.log('🔍 storeAuthData:', {
+    accessToken: { 
+      exists: !!tokens.accessToken, 
+      length: tokens.accessToken?.length || 0,
+      preview: tokens.accessToken ? `${tokens.accessToken.substring(0, 20)}...` : 'undefined'
+    },
+    refreshToken: { 
+      exists: !!tokens.refreshToken, 
+      length: tokens.refreshToken?.length || 0,
+      preview: tokens.refreshToken ? `${tokens.refreshToken.substring(0, 20)}...` : 'undefined'
+    },
+    userData: !!userData
+  })
   
   localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken)
   localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken)

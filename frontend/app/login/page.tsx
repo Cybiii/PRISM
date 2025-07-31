@@ -43,6 +43,7 @@ export default function Login() {
     setError('')
 
     try {
+      console.log('🔍 Attempting login to:', 'http://localhost:3001/api/auth/signin')
       const response = await fetch('http://localhost:3001/api/auth/signin', {
         method: 'POST',
         headers: {
@@ -51,13 +52,16 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       })
 
+      console.log('🔍 Login response status:', response.status)
       const result: LoginResponse = await response.json()
+      console.log('🔍 Login response:', result)
 
       if (result.success && result.data) {
+        console.log('🔍 Login response data:', result.data)
         storeAuthData(
           {
-            accessToken: result.data.access_token,
-            refreshToken: result.data.refresh_token
+            accessToken: result.data.accessToken,
+            refreshToken: result.data.refreshToken
           },
           {
             user: result.data.user,
@@ -95,7 +99,7 @@ export default function Login() {
           </div>
           
                       <h1 className="text-4xl font-bold text-blue-900 mb-2">
-            PUMA Health
+            PRISM Health
           </h1>
           <p className="text-blue-700/80">Intelligent Health Monitoring Platform</p>
         </div>

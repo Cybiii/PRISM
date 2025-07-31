@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </motion.div>
             <div>
               <h1 className="text-xl font-bold text-blue-900">
-                PUMA Health
+                PRISM Health
               </h1>
               <p className="text-sm text-gray-500">Smart Monitoring</p>
             </div>
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   Demo User
                 </p>
                 <p className="text-xs text-gray-500 truncate">
-                  demo@puma-health.com
+                  demo@prism-health.com
                 </p>
               </div>
             </div>
@@ -109,7 +109,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <BeakerIcon className="w-5 h-5 text-white" />
             </motion.div>
                           <h1 className="text-lg font-bold text-blue-900">
-              PUMA Health
+              PRISM Health
             </h1>
           </div>
           

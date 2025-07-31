@@ -85,7 +85,7 @@ export default function ScanPage() {
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Analysis Process</h1>
           <p className="text-gray-600">
-            Monitor real-time PUMA sensor analysis from connection to storage
+                          Monitor real-time PRISM sensor analysis from connection to storage
           </p>
         </motion.div>
 

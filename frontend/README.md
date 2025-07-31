@@ -1,5 +1,6 @@
-# PUMA
-PUMA (photosensitive urinary monitoring apparatus)
+# PRISM
+
+PRISM (Photosensitive Real-time Intelligent Sensor Monitor)
 
 Run pnpm dev to start development.
 

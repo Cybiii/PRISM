@@ -142,7 +142,7 @@ export default function ReadingsPage() {
   const getReadingHealthStatus = (ph: number, colorScore: number) => {
     // Calculate a simple health score based on pH and color
     const phScore = (ph >= 6.5 && ph <= 7.5) ? 80 : (ph >= 6.0 && ph <= 8.0) ? 60 : 40
-    const colorScorePoints = colorScore <= 1.0 ? 80 : colorScore <= 2.0 ? 60 : 40
+    const colorScorePoints = colorScore >= 9 ? 90 : colorScore >= 7 ? 70 : colorScore >= 5 ? 50 : 30
     const overallScore = (phScore + colorScorePoints) / 2
     return getHealthStatus(overallScore)
   }
@@ -295,12 +295,89 @@ export default function ReadingsPage() {
           </h1>
           <p className="text-blue-700/80 text-lg">Recent health data and analytics</p>
         </div>
+      </div>
+
+      {/* Cartoony Average Score Tile */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-2xl mb-8 relative overflow-hidden"
+      >
+        {/* Animated Background Decorations */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-6 -translate-x-6" />
+        
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-2xl font-bold">
+              Average Score
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Average Color Score */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-lg">Color Score</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-black">
+                    {analytics?.lastReading?.color_score ? analytics.lastReading.color_score.toFixed(1) : '1.0'}
+                  </div>
+                  <div className="text-sm opacity-80">
+                    {(analytics?.lastReading?.color_score || 1.0) >= 7 ? 'Excellent' : 
+                     (analytics?.lastReading?.color_score || 1.0) >= 5 ? 'Good' : 
+                     (analytics?.lastReading?.color_score || 1.0) >= 3 ? 'Fair' : 
+                     'Needs Help'}
+                  </div>
+                </div>
               </div>
+              <div className="text-sm opacity-75">Target: 8.0+ for optimal health</div>
+            </motion.div>
 
-
+            {/* Status Info */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm opacity-90">Last Updated:</span>
+                  <span className="font-bold">
+                    {analytics?.lastReading?.timestamp ? 
+                      new Date(analytics.lastReading.timestamp).toLocaleTimeString() : 
+                      new Date().toLocaleTimeString()
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm opacity-90">Total Readings:</span>
+                  <span className="font-bold">{readings.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm opacity-90">Status:</span>
+                  <div className="flex items-center space-x-1">
+                    <div className={`w-2 h-2 rounded-full ${
+                      (analytics?.lastReading?.color_score || 1.0) >= 7 ? 'bg-green-400' : 
+                      (analytics?.lastReading?.color_score || 1.0) >= 5 ? 'bg-yellow-400' : 'bg-red-400'
+                    }`} />
+                    <span className="font-bold text-sm">
+                      {analytics?.lastReading ? 'Active' : 'Waiting for data...'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -347,73 +424,71 @@ export default function ReadingsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
-                <BeakerIcon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800">Color Score</h3>
-                <p className="text-xs text-slate-600">Average</p>
-              </div>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-blue-800">
-            {analytics?.lastReading?.color_score != null ? analytics.lastReading.color_score.toFixed(1) : 'N/A'}
-          </div>
-          <div className="flex items-center space-x-1 mt-2">
-            {analytics?.lastReading?.color_score != null ? (
-              analytics?.lastReading?.color_score > 1.0 ? (
-                <ArrowTrendingUpIcon className="w-4 h-4 text-blue-600" />
-              ) : (
-                <ArrowTrendingDownIcon className="w-4 h-4 text-blue-800" />
-              )
-            ) : (
-              <div className="w-4 h-4" />
-            )}
-            <span className="text-sm text-slate-600">
-              {analytics?.lastReading?.color_score != null ? (
-                analytics?.lastReading?.color_score > 1.0 ? 'Improving' : 'Declining'
-              ) : 'Stable'}
-            </span>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-800 rounded-xl flex items-center justify-center shadow-lg">
-                <HeartIcon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800">Health Score</h3>
-                <p className="text-xs text-slate-600">Current</p>
-              </div>
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-blue-800">
-            {analytics?.healthScore || 0}/100
-          </div>
-          <div className="w-full bg-blue-100 rounded-full h-2 mt-3">
-            <div 
-              className="bg-blue-600 h-2 rounded-full"
-              style={{ width: `${analytics?.healthScore || 0}%` }}
-            />
-          </div>
-        </div>
+
+
       </div>
 
-      {/* Recent Readings Table */}
+      {/* Recent Readings - Mobile Responsive */}
       <div className="bg-white rounded-2xl shadow-lg border border-blue-200 mb-8">
-        <div className="px-6 py-4 border-b border-blue-200/30">
-          <h3 className="text-xl font-semibold text-blue-900 flex items-center">
-            <ClockIcon className="w-6 h-6 mr-3 text-blue-600" />
+        <div className="px-4 sm:px-6 py-4 border-b border-blue-200/30">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900 flex items-center">
+            <ClockIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-blue-600" />
             Recent Readings
           </h3>
         </div>
         
-        <div className="overflow-x-auto">
+        {/* Mobile Card Layout */}
+        <div className="block sm:hidden">
+          {readings.length === 0 ? (
+            <div className="text-center py-12 text-blue-600/60">
+              <BeakerIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg">No readings available</p>
+              <p className="text-sm">Start taking health measurements to see your data here</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-blue-200">
+              {paginatedReadings.map((reading, index) => (
+                <div key={reading.id} className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-medium text-blue-900 text-sm">
+                        {new Date(reading.timestamp).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-blue-700/70">
+                        {new Date(reading.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${getReadingHealthStatus(reading.ph, reading.color_score).bgColor} ${getReadingHealthStatus(reading.ph, reading.color_score).color}`}>
+                      {getReadingHealthStatus(reading.ph, reading.color_score).text}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-blue-600 font-medium">pH:</span>
+                      <div className="text-blue-900 font-semibold">{reading.ph ? reading.ph.toFixed(2) : 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span className="text-blue-600 font-medium">Score:</span>
+                      <div className="flex items-center space-x-1">
+                        <div className={`w-2 h-2 rounded-full ${reading.color_score >= 7 ? 'bg-green-500' : reading.color_score >= 5 ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                        <span className="text-blue-900 font-semibold">{reading.color_score ? reading.color_score.toFixed(1) : 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-blue-600 font-medium">H2O:</span>
+                      <div className="text-blue-900 font-semibold">{reading.hydration_ml || 0} ml</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table Layout */}
+        <div className="overflow-x-auto hidden sm:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-blue-200/30">
@@ -455,7 +530,7 @@ export default function ReadingsPage() {
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-2">
-                        <div className={`w-3 h-3 rounded-full ${reading.color_score <= 1.0 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                        <div className={`w-3 h-3 rounded-full ${reading.color_score >= 7 ? 'bg-green-500' : reading.color_score >= 5 ? 'bg-yellow-500' : 'bg-red-500'}`} />
                         <span className="text-blue-900 font-medium">{reading.color_score ? reading.color_score.toFixed(1) : 'N/A'}</span>
                       </div>
                     </td>
