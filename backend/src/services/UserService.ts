@@ -83,12 +83,34 @@ export class UserService {
       }
 
       logger.info(`User signed in: ${email}`);
+      logger.info('🔍 Session data:', {
+        hasSession: !!authData.session,
+        hasAccessToken: !!authData.session?.access_token,
+        hasRefreshToken: !!authData.session?.refresh_token,
+        accessTokenLength: authData.session?.access_token?.length || 0,
+        refreshTokenLength: authData.session?.refresh_token?.length || 0
+      });
+
+      if (!authData.session) {
+        logger.error('❌ No session data returned from Supabase signIn');
+        throw new Error('Authentication succeeded but no session tokens were returned');
+      }
+
+      if (!authData.session.access_token || !authData.session.refresh_token) {
+        logger.error('❌ Missing tokens in session:', {
+          hasAccessToken: !!authData.session.access_token, 
+          hasRefreshToken: !!authData.session.refresh_token
+        });
+        throw new Error('Authentication succeeded but session tokens are missing');
+      }
+
+      logger.info('✅ Successfully obtained Supabase tokens');
 
       return {
         user: authData.user,
         profile,
-        accessToken: authData.session?.access_token || '',
-        refreshToken: authData.session?.refresh_token || ''
+        accessToken: authData.session.access_token,
+        refreshToken: authData.session.refresh_token
       };
 
     } catch (error) {
@@ -246,148 +268,48 @@ export class UserService {
   // Utility methods
   async getCurrentUser(accessToken: string): Promise<UserSession | null> {
     try {
-      // Set the session
-      const { error: sessionError } = await supabaseService['supabase'].auth.setSession({
-        access_token: accessToken,
-        refresh_token: '' // Will be refreshed by Supabase if needed
-      });
+      logger.info('🔍 Getting current user with access token');
+      logger.info(`🎫 Token length: ${accessToken.length}`);
+      logger.info(`🎫 Token starts with: ${accessToken.substring(0, 20)}...`);
+      
+      // Directly verify the JWT token with Supabase
+      const { data: { user }, error } = await supabaseService['supabase'].auth.getUser(accessToken);
 
-      if (sessionError) {
+      if (error) {
+        logger.error('❌ Failed to verify JWT token in getCurrentUser:');
+        logger.error('❌ Error name:', error.name);
+        logger.error('❌ Error message:', error.message);
+        logger.error('❌ Full error:', JSON.stringify(error, null, 2));
         return null;
       }
 
-      const { data: { user }, error } = await supabaseService['supabase'].auth.getUser();
-
-      if (error || !user) {
+      if (!user) {
+        logger.warn('No user found for provided JWT token');
         return null;
       }
 
+      logger.info('✅ Successfully verified JWT token for user:', user.id, user.email);
+
+      // Get user profile
       const profile = await supabaseService.getUserProfile(user.id);
       if (!profile) {
+        logger.warn('No profile found for user:', user.id);
         return null;
       }
+
+      logger.debug('Successfully retrieved user profile');
 
       return {
         user,
         profile,
         accessToken,
-        refreshToken: '' // Not available from getUser
+        refreshToken: '' // Not needed for verification
       };
 
     } catch (error) {
       logger.error('Error getting current user:', error);
       return null;
     }
-  }
-
-  // For demo/testing purposes - create a demo user
-  async createDemoUser(): Promise<UserSession> {
-    const timestamp = Date.now();
-    const demoEmail = `demouser${timestamp}@test.com`;
-    const demoPassword = 'DemoUser123!';
-
-    try {
-      // Use service client for demo user creation to bypass some restrictions
-      const { data: authData, error: authError } = await supabaseService['serviceSupabase'].auth.admin.createUser({
-        email: demoEmail,
-        password: demoPassword,
-        email_confirm: true, // Auto-confirm email for demo users
-        user_metadata: {
-          full_name: 'Demo User'
-        }
-      });
-
-      if (authError || !authData.user) {
-        logger.error('Error creating demo user:', authError);
-        // Fallback to regular signup
-        return this.signUp({
-          email: demoEmail,
-          password: demoPassword,
-          fullName: 'Demo User',
-          age: 30,
-          gender: 'other',
-          medicalConditions: [],
-          medications: []
-        });
-      }
-
-      // Create user profile
-      const profile = await supabaseService.createUserProfile(authData.user, {
-        full_name: 'Demo User',
-        age: 30,
-        gender: 'other',
-        medical_conditions: [],
-        medications: []
-      });
-
-      // Generate session tokens
-      const { data: sessionData, error: sessionError } = await supabaseService['supabase'].auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPassword
-      });
-
-      if (sessionError || !sessionData.session) {
-        logger.error('Error creating demo session:', sessionError);
-        throw sessionError || new Error('Failed to create demo session');
-      }
-
-      logger.info(`Demo user created: ${demoEmail}`);
-
-      return {
-        user: authData.user,
-        profile,
-        accessToken: sessionData.session.access_token,
-        refreshToken: sessionData.session.refresh_token
-      };
-
-    } catch (error) {
-      logger.error('Error in demo user creation, falling back to regular signup:', error);
-      // Fallback to regular signup
-      return this.signUp({
-        email: demoEmail,
-        password: demoPassword,
-        fullName: 'Demo User',
-        age: 30,
-        gender: 'other',
-        medicalConditions: [],
-        medications: []
-      });
-    }
-  }
-
-  // Analytics helpers
-  async getUserHealthSummary(userId: string) {
-    try {
-      const [stats24h, stats7d, stats30d, dailySummaries] = await Promise.all([
-        supabaseService.get24HourStats(userId),
-        supabaseService.get7DayStats(userId),
-        supabaseService.get30DayStats(userId),
-        supabaseService.getDailySummaries(userId, 7)
-      ]);
-
-      return {
-        last24Hours: stats24h,
-        last7Days: stats7d,
-        last30Days: stats30d,
-        recentDailySummaries: dailySummaries,
-        overallTrend: this.calculateOverallTrend(stats24h, stats7d, stats30d)
-      };
-    } catch (error) {
-      logger.error('Error fetching user health summary:', error);
-      throw error;
-    }
-  }
-
-  private calculateOverallTrend(stats24h: any, stats7d: any, stats30d: any): 'improving' | 'declining' | 'stable' {
-    // Simple trend calculation based on average health scores
-    const trends = [stats24h.trendDirection, stats7d.trendDirection, stats30d.trendDirection];
-    
-    const improvingCount = trends.filter(t => t === 'improving').length;
-    const decliningCount = trends.filter(t => t === 'declining').length;
-    
-    if (improvingCount > decliningCount) return 'improving';
-    if (decliningCount > improvingCount) return 'declining';
-    return 'stable';
   }
 }
 

@@ -12,7 +12,6 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ArrowRightIcon,
-  SignalIcon,
   ClockIcon
 } from '@heroicons/react/24/outline'
 
@@ -34,6 +33,11 @@ interface AnalysisData {
   confidence?: number
   recommendations?: string[]
   readingId?: string
+  metadata?: {
+    hydrationStatus?: string
+    voltage?: number
+    rawADC?: number
+  }
 }
 
 export default function LiveAnalysisMonitor() {
@@ -72,15 +76,12 @@ export default function LiveAnalysisMonitor() {
   ])
 
   const wsRef = useRef<WebSocket | null>(null)
-  const [logs, setLogs] = useState<string[]>([])
-
   useEffect(() => {
     // Initialize Socket.io connection (not raw WebSocket)
     const initSocketConnection = () => {
       // For now, let's simulate connection since Socket.io client needs to be installed
       // TODO: Install socket.io-client and use proper Socket.io connection
       setIsConnected(true)
-      addLog('🔗 Connected to PUMA backend (simulated)')
       updateStep('connection', 'completed')
       
       // Listen for manual reading results instead of WebSocket events
@@ -93,13 +94,6 @@ export default function LiveAnalysisMonitor() {
       // Cleanup if needed
     }
   }, [])
-
-  const addLog = (message: string) => {
-    setLogs(prev => [
-      `${new Date().toLocaleTimeString()}: ${message}`,
-      ...prev.slice(0, 19) // Keep last 20 logs
-    ])
-  }
 
   const updateStep = (stepId: string, status: AnalysisStep['status'], progress?: number, data?: any) => {
     setSteps(prev => prev.map(step => 
@@ -129,32 +123,48 @@ export default function LiveAnalysisMonitor() {
   }
 
   const triggerManualAnalysis = async () => {
+    let progressInterval: NodeJS.Timeout | null = null
+    
     try {
       setIsAnalyzing(true)
-      addLog('🔬 Analysis Process started')
       resetSteps()
 
       // Step 1: Connection Check
       updateStep('connection', 'active')
-      addLog('🔍 Checking Arduino connection...')
       await new Promise(resolve => setTimeout(resolve, 1000))
       updateStep('connection', 'completed')
 
       // Step 2: 5s Collection
       updateStep('collection', 'active')
-      addLog('📊 Starting 5-second data collection...')
       
-      // Simulate 5-second collection with progress
-      for (let i = 0; i <= 100; i += 20) {
-        updateStep('collection', 'active', i)
-        addLog(`📊 5s Collection: ${i}%`)
-        await new Promise(resolve => setTimeout(resolve, 200))
+      // Simulate actual 5-second collection with real-time progress updates
+      const collectionStartTime = Date.now()
+      const collectionDuration = 5000 // 5 seconds
+      
+      // Update progress every 250ms for smooth animation
+      progressInterval = setInterval(() => {
+        const elapsed = Date.now() - collectionStartTime
+        const progress = Math.min((elapsed / collectionDuration) * 100, 100)
+        updateStep('collection', 'active', Math.round(progress))
+        
+        if (elapsed >= collectionDuration) {
+          clearInterval(progressInterval!)
+          progressInterval = null
+        }
+      }, 250)
+      
+      // Wait for the full 5 seconds
+      await new Promise(resolve => setTimeout(resolve, collectionDuration))
+      
+      // Ensure interval is cleared and step is completed
+      if (progressInterval) {
+        clearInterval(progressInterval)
+        progressInterval = null
       }
       updateStep('collection', 'completed')
 
       // Step 3: ML Processing
       updateStep('processing', 'active')
-      addLog('🧠 ML Processing started...')
       
       // Call the actual API
       const response = await fetch('http://localhost:3001/api/readings/manual', {
@@ -167,43 +177,42 @@ export default function LiveAnalysisMonitor() {
 
       const data = await response.json()
       
-      if (data.success && data.data?.readingData) {
-        const readingData = data.data.readingData
+      if (data.success && data.data) {
+        const readingData = data.data
         
-        // Update current data display
+        // Update current data display with actual backend response structure
         setCurrentData({
           ph: readingData.averagedReading?.ph,
           color: readingData.averagedReading?.color,
           colorScore: readingData.colorScore,
           confidence: readingData.confidence,
-          recommendations: readingData.recommendations
+          recommendations: readingData.recommendations || [],
+          metadata: readingData.averagedReading?.metadata
         })
         
-        addLog(`🎨 ML Processing complete - Score: ${readingData.colorScore}, Confidence: ${(readingData.confidence * 100).toFixed(1)}%`)
         updateStep('processing', 'completed')
 
         // Step 4: Storage
         updateStep('storage', 'active')
-        addLog('💾 Storing results to database...')
         await new Promise(resolve => setTimeout(resolve, 1000))
-        addLog(`💡 Recommendations generated: ${readingData.recommendations?.length || 0} items`)
         updateStep('storage', 'completed')
         
-        addLog('✅ Analysis Process complete!')
       } else {
-        addLog(`❌ Analysis failed: ${data.error || 'Unknown error'}`)
         setSteps(prev => prev.map(step => 
           step.status === 'active' ? { ...step, status: 'error' } : step
         ))
       }
       
     } catch (error) {
-      addLog('❌ Network error during analysis')
       console.error('Analysis error:', error)
       setSteps(prev => prev.map(step => 
         step.status === 'active' ? { ...step, status: 'error' } : step
       ))
     } finally {
+      // Always clean up interval
+      if (progressInterval) {
+        clearInterval(progressInterval)
+      }
       setIsAnalyzing(false)
     }
   }
@@ -274,7 +283,7 @@ export default function LiveAnalysisMonitor() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Analysis Process Steps */}
         <div className="lg:col-span-2">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 mb-6">
+          <div className="bg-blue-600 rounded-2xl p-6 mb-6">
             <h3 className="text-2xl font-bold text-white mb-2">Analysis Process</h3>
             <p className="text-blue-100">Live monitoring of sensor analysis pipeline</p>
           </div>
@@ -370,7 +379,7 @@ export default function LiveAnalysisMonitor() {
                 className="bg-blue-50 border border-blue-200 rounded-xl p-4"
               >
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse mr-3" />
+                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-3" />
                   <span className="font-medium text-blue-900">
                     {steps.find(step => step.status === 'active')?.name} in progress...
                   </span>
@@ -380,77 +389,242 @@ export default function LiveAnalysisMonitor() {
           </div>
         </div>
 
-        {/* Current Data & Logs */}
+        {/* Current Data */}
         <div className="space-y-6">
-          {/* Current Reading Data */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <ChartBarIcon className="w-4 h-4 mr-2" />
-              Current Reading
-            </h3>
+          {/* Current Reading Data - Cartoon Style */}
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold flex items-center">
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  🔬
+                </motion.div>
+                <span className="ml-2">Current Reading</span>
+              </h3>
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="text-2xl"
+              >
+                ✨
+              </motion.div>
+            </div>
             
-            <div className="space-y-3">
-              {currentData.ph && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">pH Level:</span>
-                  <span className="font-medium">{currentData.ph.toFixed(2)}</span>
-                </div>
+            <div className="space-y-4">
+              {/* Fun Primary Metrics */}
+              <div className="grid grid-cols-1 gap-4">
+                {/* pH Level - Fun Card */}
+                {currentData.ph && (
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl">⚗️</span>
+                        <span className="font-bold text-lg">pH Level</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-black">{currentData.ph.toFixed(2)}</div>
+                        <div className="text-sm opacity-80">
+                          {currentData.ph < 6.0 ? '🍋 Sour Zone!' : 
+                           currentData.ph > 8.0 ? '🧂 Salty Zone!' : 
+                           '🎯 Perfect Zone!'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm opacity-75">Normal Range: 6.0-8.0</div>
+                  </motion.div>
+                )}
+                
+                {/* Health Score - Fun Card */}
+                {currentData.colorScore && (
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl">🏆</span>
+                        <span className="font-bold text-lg">Health Score</span>
+                      </div>
+                      <div className="text-right">
+                                              <div className="text-3xl font-black">{currentData.colorScore}/10</div>
+                      <div className="text-sm opacity-80">
+                        {currentData.colorScore >= 9 ? 'Superhero!' : 
+                         currentData.colorScore >= 7 ? 'Pretty Good!' : 
+                         currentData.colorScore >= 5 ? 'Getting There' : 
+                         currentData.colorScore >= 3 ? 'Needs Work' :
+                         'Need Help!'}
+                      </div>
+                      </div>
+                    </div>
+                    <div className="text-sm opacity-75">Target: 8-10 for super powers!</div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Fun Hydration Meter */}
+              {currentData.colorScore && (
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  className="bg-cyan-500 rounded-2xl p-4 relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 opacity-50"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <motion.span
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="text-2xl"
+                        >
+                          💧
+                        </motion.span>
+                        <span className="font-bold text-white">Hydration Meter</span>
+                      </div>
+                      <span className="text-2xl font-black text-white">
+                        {Math.max(10, Math.min(100, (currentData.colorScore * 10) + 10))}%
+                      </span>
+                    </div>
+                    
+                    {/* Fun Progress Bar */}
+                    <div className="bg-white/30 rounded-full h-4 mb-2 overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.max(10, Math.min(100, (currentData.colorScore * 10) + 10))}%` }}
+                        transition={{ duration: 2, ease: "easeOut" }}
+                        className="bg-gradient-to-r from-yellow-300 to-green-300 h-full rounded-full flex items-center justify-end pr-2"
+                      >
+                        <motion.span
+                          animate={{ x: [-5, 5, -5] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                          className="text-xs"
+                        >
+                          🚀
+                        </motion.span>
+                      </motion.div>
+                    </div>
+                    
+                    <div className="text-white font-medium">
+                      {currentData.colorScore >= 9 ? 'You\'re a hydration champion!' : 
+                       currentData.colorScore >= 7 ? 'Keep up the good work!' : 
+                       currentData.colorScore >= 5 ? 'Time for more water!' : 
+                       currentData.colorScore >= 3 ? 'Drink more water soon!' :
+                       'DRINK WATER NOW! Your body is thirsty!'}
+                    </div>
+                  </div>
+                </motion.div>
               )}
-              
+
+              {/* Fun Color Analysis */}
               {currentData.color && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Color RGB:</span>
-                  <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-4 h-4 rounded border"
-                      style={{ backgroundColor: `rgb(${currentData.color.r}, ${currentData.color.g}, ${currentData.color.b})` }}
-                    />
-                    <span className="font-medium text-xs">
-                      {currentData.color.r}, {currentData.color.g}, {currentData.color.b}
-                    </span>
+                <div className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30">
+                  <div className="flex items-center mb-3">
+                    <span className="text-2xl mr-2">🎨</span>
+                    <span className="font-bold text-lg">Color Detective Results</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-white/80">Sample Color:</span>
+                    <div className="flex items-center space-x-2">
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
+                        style={{ backgroundColor: `rgb(${currentData.color.r}, ${currentData.color.g}, ${currentData.color.b})` }}
+                      />
+                      <span className="font-mono text-sm">
+                        RGB({currentData.color.r}, {currentData.color.g}, {currentData.color.b})
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-red-500/30 rounded-lg p-2 text-center">
+                      <div className="text-xs opacity-75">Red</div>
+                      <div className="font-bold">{currentData.color.r}</div>
+                    </div>
+                    <div className="bg-green-500/30 rounded-lg p-2 text-center">
+                      <div className="text-xs opacity-75">Green</div>
+                      <div className="font-bold">{currentData.color.g}</div>
+                    </div>
+                    <div className="bg-blue-500/30 rounded-lg p-2 text-center">
+                      <div className="text-xs opacity-75">Blue</div>
+                      <div className="font-bold">{currentData.color.b}</div>
+                    </div>
                   </div>
                 </div>
               )}
-              
-              {currentData.colorScore && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Health Score:</span>
-                  <span className="font-medium">{currentData.colorScore}/10</span>
+
+              {/* Fun Status Info */}
+              <div className="bg-white/10 rounded-2xl p-4 space-y-3">
+                {/* Confidence Meter */}
+                {currentData.confidence && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">Confidence Level:</span>
+                      <span className="font-bold">{(currentData.confidence * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="bg-white/20 rounded-full h-3 overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${currentData.confidence * 100}%` }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className="bg-gradient-to-r from-green-400 to-emerald-500 h-full rounded-full"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center">
+                  <span>Last Updated:</span>
+                  <span className="font-medium">{new Date().toLocaleTimeString()}</span>
                 </div>
-              )}
-              
-              {currentData.confidence && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Confidence:</span>
-                  <span className="font-medium">{(currentData.confidence * 100).toFixed(1)}%</span>
+                
+                <div className="flex justify-between items-center">
+                  <span>Status:</span>
+                  <span className="font-medium">
+                    {currentData.ph || currentData.colorScore ? 'Live & Active!' : 'Waiting for data...'}
+                  </span>
                 </div>
+              </div>
+
+              {/* Fun Recommendations */}
+              {(currentData.ph || currentData.colorScore) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-yellow-400 text-yellow-900 rounded-2xl p-4"
+                >
+                  <div className="flex items-center mb-2">
+                    <span className="font-bold text-lg">Your Personal Health Coach Says:</span>
+                  </div>
+                  <div className="space-y-1 font-medium">
+                    {currentData.recommendations && currentData.recommendations.length > 0 ? (
+                      currentData.recommendations.map((rec, index) => (
+                        <div key={index}>• {rec}</div>
+                      ))
+                    ) : (
+                      <>
+                        {currentData.colorScore && currentData.colorScore < 7 ? 
+                          'Drink 8-10 glasses of water daily - your body will thank you!' : 
+                          'Keep up those amazing hydration levels!'}
+                        <br />
+                        {currentData.ph && (currentData.ph < 6.0 || currentData.ph > 8.0) ? 
+                          'Consider chatting with your doctor about these pH levels' : 
+                          'Your pH levels are in the perfect zone - well done!'}
+                      </>
+                    )}
+                  </div>
+                </motion.div>
               )}
             </div>
           </div>
 
-          {/* Live Logs */}
-          <div className="bg-gray-900 rounded-xl p-4 text-sm">
-            <h3 className="font-semibold text-white mb-3 flex items-center">
-              <SignalIcon className="w-4 h-4 mr-2" />
-              Live Logs
-            </h3>
-            
-            <div className="h-64 overflow-y-auto space-y-1">
-              <AnimatePresence>
-                {logs.map((log, index) => (
-                  <motion.div
-                    key={`${log}-${index}`}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="text-green-400 font-mono text-xs"
-                  >
-                    {log}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

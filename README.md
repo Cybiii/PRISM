@@ -12,7 +12,6 @@ PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monit
 - **Technical Research & Analysis**: Anchita Ganesh
 - **CAD Modeling & Prototyping**: Ernesto Tellez Perez & Connor McVicker
 
-
 ### Key Health Indicators
 
 - **pH Levels**: Monitor acidity/alkalinity (normal range: 4.5-8.5)
@@ -87,7 +86,24 @@ git clone https://github.com/your-username/PUMA.git
 cd PUMA
 ```
 
-### 2. Backend Setup
+### 2. 🚀 Development Mode (Recommended)
+
+```bash
+# Install all dependencies
+npm run install-all
+
+# Start both backend and frontend simultaneously
+npm run dev
+```
+
+This starts both servers with auto-recompilation:
+
+- **Backend**: http://localhost:3001
+- **Frontend**: http://localhost:3000
+
+### 3. Manual Setup (Alternative)
+
+**Backend Setup:**
 
 ```bash
 cd backend
@@ -96,17 +112,13 @@ npm run build
 npm run dev    # Development with mock data
 ```
 
-The backend will start on http://localhost:3001
-
-### 3. Frontend Setup
+**Frontend Setup:**
 
 ```bash
 cd ../frontend
 npm install
 npm run dev  # Development server
 ```
-
-The frontend will start on http://localhost:3000
 
 ### 4. Hardware Setup (Optional)
 

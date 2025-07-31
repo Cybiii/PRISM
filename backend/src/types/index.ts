@@ -34,6 +34,11 @@ export interface ArduinoData {
   ph: number;
   color: RGBColor;
   timestamp: number;
+  metadata?: {
+    hydrationStatus?: string;
+    voltage?: number;
+    rawADC?: number;
+  };
 }
 
 export interface PHBuffer {

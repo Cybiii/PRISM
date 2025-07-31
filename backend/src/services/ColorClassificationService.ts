@@ -8,13 +8,119 @@ export class ColorClassificationService {
 
   async initialize(): Promise<void> {
     try {
-      // Clusters will be loaded from database in the main app
+      // Initialize with default health-based color clusters (1-10 scale)
+      if (this.clusters.length === 0) {
+        this.initializeDefaultClusters();
+      }
       this.initialized = true;
-      logger.info('Color classification service initialized');
+      logger.info(`Color classification service initialized with ${this.clusters.length} clusters`);
     } catch (error) {
       logger.error('Color classification initialization failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Initialize default color clusters based on urine health analysis
+   * Scores: 1 (worst) to 10 (best/healthiest)
+   */
+  private initializeDefaultClusters(): void {
+    // Define clusters based on typical urine colors and health implications
+    const defaultClusters: ColorCluster[] = [
+      // Score 10: Optimal hydration - very pale yellow/clear
+      {
+        id: 1,
+        score: 10,
+        centroid: this.rgbToLab({ r: 255, g: 255, b: 230 }), // Very pale yellow
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Excellent hydration - very pale yellow"
+      },
+      // Score 9: Great hydration - pale yellow
+      {
+        id: 2,
+        score: 9,
+        centroid: this.rgbToLab({ r: 255, g: 250, b: 205 }), // Pale yellow
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Great hydration - pale yellow"
+      },
+      // Score 8: Good hydration - light yellow
+      {
+        id: 3,
+        score: 8,
+        centroid: this.rgbToLab({ r: 255, g: 245, b: 180 }), // Light yellow
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Good hydration - light yellow"
+      },
+      // Score 7: Fair hydration - yellow
+      {
+        id: 4,
+        score: 7,
+        centroid: this.rgbToLab({ r: 255, g: 235, b: 160 }), // Yellow
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Fair hydration - yellow"
+      },
+      // Score 6: Adequate - medium yellow
+      {
+        id: 5,
+        score: 6,
+        centroid: this.rgbToLab({ r: 255, g: 220, b: 120 }), // Medium yellow
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Adequate hydration - medium yellow"
+      },
+      // Score 5: Borderline - dark yellow
+      {
+        id: 6,
+        score: 5,
+        centroid: this.rgbToLab({ r: 255, g: 200, b: 80 }), // Dark yellow
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Borderline - dark yellow"
+      },
+      // Score 4: Mild dehydration - amber
+      {
+        id: 7,
+        score: 4,
+        centroid: this.rgbToLab({ r: 255, g: 180, b: 50 }), // Amber
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Mild dehydration - amber"
+      },
+      // Score 3: Moderate dehydration - dark amber
+      {
+        id: 8,
+        score: 3,
+        centroid: this.rgbToLab({ r: 200, g: 140, b: 30 }), // Dark amber
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Moderate dehydration - dark amber"
+      },
+      // Score 2: Severe dehydration - brown
+      {
+        id: 9,
+        score: 2,
+        centroid: this.rgbToLab({ r: 160, g: 100, b: 20 }), // Brown
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Severe dehydration - brown"  
+      },
+      // Score 1: Critical dehydration - dark brown
+      {
+        id: 10,
+        score: 1,
+        centroid: this.rgbToLab({ r: 120, g: 70, b: 15 }), // Dark brown
+        sampleCount: 100,
+        lastUpdated: new Date(),
+        description: "Critical dehydration - dark brown"
+      }
+    ];
+
+    this.setClusters(defaultClusters);
+    logger.info('Initialized with default health-based color clusters (1-10 scale)');
   }
 
   setClusters(clusters: ColorCluster[]): void {
@@ -28,6 +134,11 @@ export class ColorClassificationService {
   rgbToLab(rgb: RGBColor): LABColor {
     // First convert RGB to XYZ
     let { r, g, b } = rgb;
+    
+    // Validate RGB values and ensure they're in valid range
+    r = Math.max(0, Math.min(255, r || 0));
+    g = Math.max(0, Math.min(255, g || 0));
+    b = Math.max(0, Math.min(255, b || 0));
     
     // Normalize RGB values to 0-1 range
     r = r / 255.0;
@@ -58,7 +169,14 @@ export class ColorClassificationService {
     const a = 500 * (fx - fy);
     const bVal = 200 * (fy - fz);
 
-    return { l, a, b: bVal };
+    // Ensure no NaN values in the result
+    const result = {
+      l: isNaN(l) || !isFinite(l) ? 50 : l,
+      a: isNaN(a) || !isFinite(a) ? 0 : a,
+      b: isNaN(bVal) || !isFinite(bVal) ? 0 : bVal
+    };
+
+    return result;
   }
 
   /**
@@ -98,7 +216,14 @@ export class ColorClassificationService {
     // Using a sigmoid function to map distance to confidence (0-1)
     const maxDistance = 100; // Maximum expected Delta E distance
     const normalizedDistance = Math.min(minDistance / maxDistance, 1);
-    const confidence = 1 / (1 + Math.exp(10 * (normalizedDistance - 0.5)));
+    
+    // Ensure we don't get NaN values
+    let confidence = 0.5; // default confidence
+    if (!isNaN(minDistance) && isFinite(minDistance)) {
+      confidence = 1 / (1 + Math.exp(10 * (normalizedDistance - 0.5)));
+      // Ensure confidence is between 0 and 1
+      confidence = Math.max(0, Math.min(1, confidence));
+    }
 
     logger.debug(`Color classification: RGB(${rgb.r},${rgb.g},${rgb.b}) -> Score ${nearestCluster.score}, Distance: ${minDistance.toFixed(2)}, Confidence: ${confidence.toFixed(3)}`);
 

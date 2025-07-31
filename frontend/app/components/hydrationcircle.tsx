@@ -81,10 +81,10 @@ export default function HydrationCircle() {
   }
 
   const getHydrationStatus = (level: number) => {
-    if (level >= 80) return { status: 'excellent', color: 'text-emerald-600', bgColor: 'from-emerald-400 to-emerald-600', icon: CheckCircleIcon }
-    if (level >= 60) return { status: 'good', color: 'text-blue-600', bgColor: 'from-blue-400 to-blue-600', icon: BeakerIcon }
-    if (level >= 40) return { status: 'moderate', color: 'text-yellow-600', bgColor: 'from-yellow-400 to-orange-500', icon: ExclamationTriangleIcon }
-    return { status: 'low', color: 'text-red-600', bgColor: 'from-red-400 to-red-600', icon: ExclamationTriangleIcon }
+    if (level >= 80) return { status: 'excellent', color: 'text-blue-800', bgColor: 'bg-blue-800', icon: CheckCircleIcon }
+    if (level >= 60) return { status: 'good', color: 'text-blue-600', bgColor: 'bg-blue-600', icon: BeakerIcon }
+    if (level >= 40) return { status: 'moderate', color: 'text-blue-500', bgColor: 'bg-blue-500', icon: ExclamationTriangleIcon }
+    return { status: 'low', color: 'text-slate-600', bgColor: 'bg-slate-600', icon: ExclamationTriangleIcon }
   }
 
   const getStatusMessage = (level: number) => {
@@ -218,7 +218,7 @@ export default function HydrationCircle() {
         transition={{ delay: 1 }}
         className="text-center max-w-xs"
       >
-        <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-r ${status.bgColor} text-white`}>
+        <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl ${status.bgColor} text-white`}>
           <p className="font-medium text-sm md:text-base">{getStatusMessage(hydrationLevel)}</p>
         </div>
         

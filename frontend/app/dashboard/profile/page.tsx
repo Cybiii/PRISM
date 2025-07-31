@@ -14,10 +14,10 @@ import {
   UserIcon,
   HeartIcon,
   PlusIcon,
-  TrashIcon
+  TrashIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { authenticatedFetch } from '../../lib/auth'
-import AuthDebugger from '../../components/AuthDebugger'
 
 interface UserProfile {
   id: string
@@ -49,6 +49,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [backendStatus, setBackendStatus] = useState<'connected' | 'disconnected' | 'unknown'>('connected')
+  const [navUserProfile, setNavUserProfile] = useState<{ full_name?: string } | null>(null)
   const [newCondition, setNewCondition] = useState('')
   const [newMedication, setNewMedication] = useState('')
 
@@ -83,12 +85,38 @@ export default function ProfilePage() {
       setLoading(true)
       
       // Check if user is authenticated first
-      const token = localStorage.getItem('puma_access_token')
+      let token = localStorage.getItem('puma_access_token')
       console.log('🔑 Access token check:', { 
         hasToken: !!token, 
         tokenLength: token?.length || 0,
         tokenPreview: token ? `${token.substring(0, 20)}...` : 'None'
       })
+      
+      // Development mode: Create mock authentication if no token exists
+      if (!token && (typeof window !== 'undefined' && window.location.hostname === 'localhost')) {
+        console.log('🔧 Development mode: Setting up mock authentication')
+        const mockToken = 'dev-mock-token-' + Date.now()
+        const mockUserData = {
+          user: {
+            id: 'demo-user-123',
+            email: 'demo@puma-health.com',
+            emailConfirmed: true
+          },
+          profile: {
+            id: 'demo-profile-123',
+            full_name: 'Demo User',
+            age: 25,
+            gender: 'prefer_not_to_say'
+          }
+        }
+        
+        localStorage.setItem('puma_access_token', mockToken)
+        localStorage.setItem('puma_refresh_token', 'dev-mock-refresh-token')
+        localStorage.setItem('puma_user_data', JSON.stringify(mockUserData))
+        token = mockToken
+        
+        console.log('✅ Mock authentication set up successfully')
+      }
       
       if (!token) {
         console.log('❌ No access token found, redirecting to login')
@@ -172,6 +200,31 @@ export default function ProfilePage() {
       ...prev,
       [name]: value
     }))
+  }
+
+  // Load user profile for navbar
+  useEffect(() => {
+    const loadNavUserProfile = async () => {
+      try {
+        const userData = localStorage.getItem('puma_user_data')
+        if (userData) {
+          const parsed = JSON.parse(userData)
+          setNavUserProfile({
+            full_name: parsed.profile?.full_name
+          })
+        }
+      } catch (error) {
+        console.error('Error loading nav user profile:', error)
+      }
+    }
+    loadNavUserProfile()
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('puma_access_token')
+    localStorage.removeItem('puma_refresh_token')
+    localStorage.removeItem('puma_user_data')
+    router.push('/login')
   }
 
   const addCondition = () => {
@@ -300,7 +353,7 @@ export default function ProfilePage() {
   if (loading) {
     console.log('🔄 ProfilePage rendering loading state')
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center py-20">
             <motion.div
@@ -324,8 +377,46 @@ export default function ProfilePage() {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <header className="hidden md:block bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-end items-center h-16">
+            <div className="flex items-center space-x-4">
+              {/* Connection Status */}
+              <div className="flex items-center space-x-2 bg-green-100 px-3 py-1.5 rounded-full border border-green-300">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-xs font-medium text-green-700">
+                  {backendStatus === 'connected' ? 'System Online' : 'System Offline'}
+                </span>
+              </div>
+
+              {/* User Profile Button */}
+              <button
+                onClick={() => router.push('/dashboard/profile')}
+                className="flex items-center space-x-2 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm transition-colors"
+              >
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <UserIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-900 max-w-[120px] truncate">
+                  {navUserProfile?.full_name || profile?.full_name || 'User'}
+                </span>
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
+              >
+                <ArrowRightOnRectangleIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto p-4">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -376,7 +467,7 @@ export default function ProfilePage() {
           className="bg-white rounded-2xl shadow-xl overflow-hidden"
         >
           {/* Header Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-8">
+          <div className="bg-blue-600 px-6 py-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
@@ -691,9 +782,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </div>
-      
-      {/* Temporary Auth Debugger */}
-      <AuthDebugger />
+
     </div>
   )
 }

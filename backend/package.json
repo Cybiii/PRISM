@@ -4,7 +4,7 @@
   "description": "Photosensitive Urinary Monitoring Apparatus - Backend API",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "set NODE_ENV=development && tsx watch src/index.ts",
+    "dev": "set NODE_ENV=development&& tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "jest",

@@ -13,6 +13,9 @@ import { setupRoutes } from './routes';
 
 dotenv.config();
 
+console.log('🔧 NODE_ENV:', process.env.NODE_ENV);
+console.log('🔧 All NODE env vars:', Object.keys(process.env).filter(k => k.includes('NODE')));
+
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -92,18 +95,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    services: {
-      database: dbService ? 'running' : 'not initialized',
-      serial: serialService ? 'running' : 'not initialized',
-      colorClassification: colorService ? 'running' : 'not initialized'
-    }
-  });
-});
+
 
 // Start server
 async function startServer() {

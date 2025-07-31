@@ -18,5 +18,37 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 html, body {
-  background-color: #f0f0f0;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+/* Clean utility classes without gradients */
+@layer utilities {
+  .ocean-gradient {
+    background: #0ea5e9;
+  }
+  
+  .light-ocean-gradient {
+    background: #7dd3fc;
+  }
+  
+  .aqua-gradient {
+    background: #06b6d4;
+  }
+  
+  .water-surface-gradient {
+    background: #f0f9ff;
+  }
+  
+  .teal-gradient {
+    background: #14b8a6;
+  }
+  
+  .water-shimmer {
+    background: #ffffff;
+  }
+  
+  .wave-animation {
+    /* No animation for performance */
+  }
 }

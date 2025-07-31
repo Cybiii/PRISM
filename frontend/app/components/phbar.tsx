@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+// Animation imports removed for performance
 import { 
   BeakerIcon, 
   ExclamationTriangleIcon, 
@@ -71,25 +71,25 @@ export default function PhBar() {
       if (ph >= 6.0 && ph <= 7.5) {
         return { 
           status: 'optimal', 
-          color: 'text-emerald-600', 
-          bgColor: 'from-emerald-400 to-emerald-600',
-          barColor: 'bg-gradient-to-r from-emerald-400 to-emerald-500',
+          color: 'text-blue-700', 
+          bgColor: 'bg-blue-500', // Lighter blue for better readability
+          barColor: 'bg-blue-500',
           icon: CheckCircleIcon 
         }
       }
       return { 
         status: 'normal', 
         color: 'text-blue-600', 
-        bgColor: 'from-blue-400 to-blue-600',
-        barColor: 'bg-gradient-to-r from-blue-400 to-blue-500',
+        bgColor: 'bg-blue-400', // Lighter blue
+        barColor: 'bg-blue-400',
         icon: InformationCircleIcon 
       }
     }
     return { 
       status: 'concerning', 
       color: 'text-red-600', 
-      bgColor: 'from-red-400 to-red-600',
-      barColor: 'bg-gradient-to-r from-red-400 to-red-500',
+      bgColor: 'bg-red-500', // Use red for concerning levels
+      barColor: 'bg-red-500',
       icon: ExclamationTriangleIcon 
     }
   }
@@ -101,41 +101,20 @@ export default function PhBar() {
     return "pH too alkaline - consult doctor 🚨"
   }
 
-  const getPhRange = () => {
-    const ranges = [
-      { min: 4.0, max: 5.0, label: 'Very Acidic', color: 'bg-red-500' },
-      { min: 5.0, max: 6.0, label: 'Acidic', color: 'bg-orange-400' },
-      { min: 6.0, max: 7.0, label: 'Optimal', color: 'bg-emerald-400' },
-      { min: 7.0, max: 8.0, label: 'Good', color: 'bg-blue-400' },
-      { min: 8.0, max: 9.0, label: 'Alkaline', color: 'bg-purple-400' },
-    ]
-    return ranges
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full"
-        />
+        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
       </div>
     )
   }
 
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <BeakerIcon className="w-16 h-16 mb-4 opacity-50" />
-        </motion.div>
-        <p className="text-center">No pH data available</p>
-        <p className="text-sm text-center mt-2">Start a sensor reading to see your levels</p>
+      <div className="text-center py-12">
+        <BeakerIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <p className="text-gray-600">No pH data available</p>
+        <p className="text-sm text-gray-500">Start taking measurements to see your pH levels</p>
       </div>
     )
   }
@@ -143,172 +122,163 @@ export default function PhBar() {
   const phLevel = data.ph
   const status = getPhStatus(phLevel)
   const StatusIcon = status.icon
-  const ranges = getPhRange()
-  
-  // Calculate position on the pH scale (0-100%)
-  const minPh = 4.0
+
+  // pH scale configuration - more muted colors with red at extremes
+  const ranges = [
+    { min: 4.5, max: 5.5, color: '#ef4444', label: 'Acidic' }, // Red for acidic
+    { min: 5.5, max: 6.5, color: '#f97316', label: 'Slightly Acidic' }, // Muted orange
+    { min: 6.5, max: 7.5, color: '#22c55e', label: 'Optimal' }, // Muted green
+    { min: 7.5, max: 8.5, color: '#f59e0b', label: 'Slightly Alkaline' }, // Muted yellow
+    { min: 8.5, max: 9.5, color: '#ef4444', label: 'Alkaline' } // Red for alkaline
+  ]
+
+  // Calculate position for pH indicator
+  const minPh = 4.5
   const maxPh = 9.0
   const phPosition = Math.max(0, Math.min(100, ((phLevel - minPh) / (maxPh - minPh)) * 100))
 
   return (
-    <div className="space-y-6">
+    <div className="bg-white rounded-2xl shadow-xl p-6">
+      {/* pH Balance Header */}
+      <div className="bg-blue-600 rounded-2xl p-6 mb-6">
+        <h2 className="text-2xl font-bold text-white mb-2 flex items-center">
+          <StatusIcon className="w-6 h-6 mr-2" />
+          pH Balance Monitor
+        </h2>
+        <p className="text-blue-100">Real-time monitoring of your pH levels</p>
+      </div>
+
       {/* Main pH Display */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center"
-      >
-        <div className="flex items-center justify-center space-x-3 mb-4">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: "spring" }}
-            className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg md:rounded-xl flex items-center justify-center"
-          >
-            <StatusIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
-          </motion.div>
-          <div>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.5, type: "spring" }}
-              className="text-3xl md:text-4xl font-bold text-gray-800"
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="text-center">
+          <div className="flex items-center justify-center space-x-4 mb-6">
+            <div className="relative">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <StatusIcon className="w-8 h-8 text-white" />
+              </div>
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+              </div>
+            </div>
+            <div className="text-left">
+              <div className="text-5xl font-bold text-gray-900 mb-1">
+                {phLevel.toFixed(1)}
+              </div>
+              <div className="text-lg text-gray-600 font-medium">pH Level</div>
+            </div>
+          </div>
+
+          {/* Status Badge */}
+          <div className={`inline-flex items-center px-6 py-3 rounded-full text-white font-semibold text-sm shadow-lg ${status.bgColor}`}>
+            <StatusIcon className="w-4 h-4 mr-2" />
+            {getPhMessage(phLevel)}
+          </div>
+        </div>
+      </div>
+
+      {/* pH Scale Analysis */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="mb-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center">
+            <BeakerIcon className="w-5 h-5 mr-2 text-blue-600" />
+            pH Scale Analysis
+          </h3>
+          <p className="text-gray-600">Your current pH level on the wellness scale</p>
+        </div>
+
+        <div className="relative mb-8">
+          {/* Enhanced Scale Background */}
+          <div className="relative h-20 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl shadow-inner border border-gray-200 overflow-hidden">
+            {/* Color segments with better styling */}
+            <div className="flex h-full">
+              {ranges.map((range, index) => (
+                <div
+                  key={index}
+                  className="flex-1 relative"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${range.color}dd, ${range.color}aa)`,
+                  }}
+                >
+                  {/* Segment labels */}
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-white text-xs font-medium opacity-90">
+                    {range.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Enhanced pH Indicator */}
+            <div
+              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 z-20"
+              style={{ left: `${phPosition}%` }}
             >
-              {phLevel.toFixed(1)}
-            </motion.div>
-            <div className="text-xs md:text-sm text-gray-600">pH Level</div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* pH Scale Bar */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.4, duration: 0.6 }}
-        className="relative"
-      >
-        {/* Scale Background */}
-        <div className="relative h-16 bg-gray-100 rounded-2xl overflow-hidden">
-          {/* Color segments */}
-          <div className="flex h-full">
-            {ranges.map((range, index) => (
-              <motion.div
-                key={index}
-                initial={{ width: 0 }}
-                animate={{ width: '20%' }}
-                transition={{ delay: 0.6 + index * 0.1, duration: 0.5 }}
-                className={`${range.color} flex items-center justify-center`}
-              >
-                <span className="text-xs font-medium text-white opacity-80">
-                  {range.label}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* pH Indicator */}
-          <motion.div
-            initial={{ left: '50%' }}
-            animate={{ left: `${phPosition}%` }}
-            transition={{ delay: 1, duration: 1, type: "spring" }}
-            className="absolute top-0 h-full w-1 transform -translate-x-1/2"
-          >
-            <div className="w-full h-full bg-white shadow-lg"></div>
-            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full p-2 shadow-lg border-2 border-gray-200">
-              <div className="w-3 h-3 bg-gray-800 rounded-full"></div>
+              <div className="relative">
+                <div className="w-6 h-6 bg-white rounded-full shadow-2xl border-4 border-gray-800 relative z-10"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-gray-800 rounded-full"></div>
+                {/* Indicator line */}
+                <div className="absolute top-8 left-1/2 transform -translate-x-1/2 w-0.5 h-6 bg-gray-800"></div>
+                {/* Value display */}
+                <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm font-bold whitespace-nowrap">
+                  {phLevel.toFixed(1)}
+                </div>
+              </div>
             </div>
-          </motion.div>
-        </div>
 
-        {/* Scale Labels */}
-        <div className="flex justify-between text-xs text-gray-500 mt-2 px-2">
-          <span>4.0</span>
-          <span>5.0</span>
-          <span>6.0</span>
-          <span>7.0</span>
-          <span>8.0</span>
-          <span>9.0</span>
-        </div>
-      </motion.div>
-
-      {/* Status Message */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
-        className="text-center"
-      >
-        <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-r ${status.bgColor} text-white mb-3 md:mb-4`}>
-          <p className="font-medium text-sm md:text-base">{getPhMessage(phLevel)}</p>
-        </div>
-
-        {/* pH Facts */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="bg-gray-50 rounded-lg md:rounded-xl p-3 md:p-4"
-        >
-          <h4 className="text-xs md:text-sm font-semibold text-gray-700 mb-2 md:mb-3 flex items-center justify-center space-x-2">
-            <InformationCircleIcon className="w-3 h-3 md:w-4 md:h-4" />
-            <span>pH Scale Guide</span>
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full flex-shrink-0"></div>
-              <span>6.0-7.5: Optimal</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></div>
-              <span>4.5-8.0: Normal</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-orange-400 rounded-full flex-shrink-0"></div>
-              <span>&lt;4.5: Too Acidic</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-purple-400 rounded-full flex-shrink-0"></div>
-              <span>&gt;8.0: Too Alkaline</span>
+            {/* Scale numbers */}
+            <div className="absolute inset-x-0 -bottom-8 flex justify-between text-sm font-medium text-gray-700 px-2">
+              <span>4.5</span>
+              <span>5.5</span>
+              <span>6.5</span>
+              <span>7.5</span>
+              <span>8.5</span>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Additional Stats */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.8 }}
-        className="grid grid-cols-2 gap-3 md:gap-4"
-      >
-        <div className="bg-white border border-gray-200 rounded-lg md:rounded-xl p-2 md:p-3 text-center">
-          <div className="text-base md:text-lg font-bold text-gray-800 capitalize">{status.status}</div>
-          <div className="text-xs text-gray-600">pH Status</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg md:rounded-xl p-2 md:p-3 text-center">
-          <div className="text-base md:text-lg font-bold text-gray-800">{data.colorScore}/5</div>
-          <div className="text-xs text-gray-600">Color Score</div>
-        </div>
-      </motion.div>
+      </div>
 
-      {/* Real-time indicator */}
-      <motion.div
-        animate={{
-          scale: [1, 1.1, 1],
-          opacity: [0.5, 1, 0.5],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        className="flex items-center justify-center space-x-2 text-xs text-gray-500"
-      >
-        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-        <span>{isConnected ? 'Live monitoring' : 'Offline mode'}</span>
-      </motion.div>
+      {/* Current Reading Data */}
+      <div className="bg-gray-50 rounded-xl p-4 mb-6">
+        <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+          <InformationCircleIcon className="w-4 h-4 mr-2" />
+          Current Reading Data
+        </h3>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">pH Level:</span>
+              <span className="font-medium text-gray-900">{phLevel.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">Status:</span>
+              <span className={`font-medium capitalize ${status.color}`}>{status.status}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">Color Score:</span>
+              <span className="font-medium text-gray-900">{data.colorScore}/5</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">Last Updated:</span>
+              <span className="font-medium text-gray-900">{new Date(data.timestamp).toLocaleTimeString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Connection Status */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} shadow-lg`}></div>
+          <span className="text-sm text-gray-600 font-medium">
+            {isConnected ? 'Live monitoring active' : 'Offline - showing last reading'}
+          </span>
+        </div>
+        <div className="text-sm text-gray-500">
+          Updated {new Date(data.timestamp).toLocaleTimeString()}
+        </div>
+      </div>
     </div>
   )
 } 

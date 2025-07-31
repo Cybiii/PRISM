@@ -9,7 +9,6 @@ export class DataProcessingService {
   private phBuffer: PHBuffer;
   private readonly bufferDuration = 10000; // 10 seconds in milliseconds
   private readonly bufferCapacity = 100; // Maximum buffer size
-  private defaultUserId: string | undefined;
 
   constructor(
     private dbService: DatabaseService,
@@ -24,7 +23,7 @@ export class DataProcessingService {
   }
 
   /**
-   * Process incoming Arduino data - adds to pH buffer and processes color immediately
+   * Process incoming Arduino data - only saves to Supabase with valid authentication
    */
   async processArduinoData(data: ArduinoData, userId?: string): Promise<void> {
     try {
@@ -48,28 +47,13 @@ export class DataProcessingService {
         confidence: colorResult.confidence
       };
 
-      // Save to legacy SQLite database (for backward compatibility)
-      const reading: Omit<UrineReading, 'id'> = {
-        timestamp: processedData.timestamp,
-        phValue: processedData.phValue,
-        colorRgb: processedData.colorRgb,
-        colorLab: colorResult.lab,
-        colorScore: processedData.colorScore,
-        deviceId: 'arduino-001',
-        processed: true
-      };
-
-      const readingId = await this.dbService.saveReading(reading);
-      logger.info(`Saved reading ${readingId}: pH=${averagePh.toFixed(2)}, Color Score=${colorResult.score}, Confidence=${colorResult.confidence.toFixed(3)}`);
-
-      // Save to Supabase if we have a user ID or demo mode
-      const targetUserId = userId || this.defaultUserId;
-      if (targetUserId) {
+      // Only save to Supabase if we have a valid authenticated user UUID
+      if (userId && this.isValidUUID(userId)) {
         try {
           // Convert to Supabase format
           const healthReading = supabaseService.processedDataToHealthReading(
-            targetUserId,
-            processedData, // Use the existing processedData object
+            userId,
+            processedData,
             'arduino-tcs34725'
           );
           
@@ -77,25 +61,39 @@ export class DataProcessingService {
           healthReading.recommendations = this.colorService.getHealthRecommendations(colorResult.score);
           
           await supabaseService.saveHealthReading(healthReading);
-          logger.info(`Saved reading to Supabase for user: ${targetUserId}`);
+          logger.info(`✅ Saved reading to Supabase for user: ${userId}`);
+
+          // Emit real-time data to connected clients
+          this.io.emit('newReading', {
+            id: `reading_${Date.now()}`,
+            timestamp: processedData.timestamp,
+            phValue: processedData.phValue,
+            colorRgb: processedData.colorRgb,
+            colorScore: processedData.colorScore,
+            deviceId: 'arduino-001',
+            processed: true,
+            userId: userId,
+            recommendations: this.colorService.getHealthRecommendations(colorResult.score)
+          });
+
+          // Check for alerts
+          this.checkForAlerts(processedData, userId);
+          
         } catch (supabaseError) {
-          logger.warn('Failed to save to Supabase, continuing with SQLite:', supabaseError);
+          logger.error('❌ Failed to save to Supabase:', supabaseError);
+          throw supabaseError; // Don't fallback to SQLite, require proper saving
+        }
+      } else {
+        if (!userId) {
+          logger.warn('⚠️ No user ID provided - data not saved. Authentication required.');
+        } else {
+          logger.warn(`⚠️ Invalid UUID format: ${userId} - data not saved.`);
         }
       }
 
-      // Emit real-time data to connected clients
-      this.io.emit('newReading', {
-        ...reading,
-        id: readingId,
-        userId: targetUserId,
-        recommendations: this.colorService.getHealthRecommendations(colorResult.score)
-      });
-
-      // Check for alerts
-      this.checkForAlerts(processedData, targetUserId);
-
     } catch (error) {
       logger.error('Error processing Arduino data:', error);
+      throw error;
     }
   }
 
@@ -168,7 +166,7 @@ export class DataProcessingService {
       logger.warn('Health alerts triggered:', alerts);
       this.io.emit('healthAlert', {
         timestamp: data.timestamp,
-        userId: userId || this.defaultUserId,
+        userId: userId || undefined, // Pass userId if available
         alerts,
         data: {
           ph: data.phValue,
@@ -277,12 +275,11 @@ export class DataProcessingService {
     await this.processArduinoData(mockData, userId);
   }
 
-  setDefaultUserId(userId: string): void {
-    this.defaultUserId = userId;
-    logger.info(`Set default user ID for demo mode: ${userId}`);
-  }
-
-  getDefaultUserId(): string | undefined {
-    return this.defaultUserId;
+  /**
+   * Validate if a string is a valid UUID
+   */
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 } 

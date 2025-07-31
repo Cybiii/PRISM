@@ -40,7 +40,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
+    <div className="flex min-h-screen bg-white">
       {/* Desktop Sidebar */}
       <motion.div
         variants={sidebarVariants}
@@ -54,12 +54,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <motion.div
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.5 }}
-              className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mr-3"
+              className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center mr-3"
             >
               <BeakerIcon className="w-6 h-6 text-white" />
             </motion.div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold text-blue-900">
                 PUMA Health
               </h1>
               <p className="text-sm text-gray-500">Smart Monitoring</p>
@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             className="flex-shrink-0 p-4 border-t border-gray-200"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-medium text-sm">U</span>
               </div>
               <div className="flex-1 min-w-0">
@@ -104,11 +104,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
-              className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center"
+                              className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"
             >
               <BeakerIcon className="w-5 h-5 text-white" />
             </motion.div>
-            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          <h1 className="text-lg font-bold text-blue-900">
               PUMA Health
             </h1>
           </div>
@@ -149,8 +149,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-3xl opacity-5" />
-        <div className="absolute bottom-20 left-20 w-48 h-48 bg-gradient-to-r from-indigo-200 to-cyan-200 rounded-full blur-3xl opacity-5" />
+        <div className="absolute top-20 right-20 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-5" />
+        <div className="absolute bottom-20 left-20 w-48 h-48 bg-blue-100 rounded-full blur-3xl opacity-5" />
       </div>
     </div>
   )

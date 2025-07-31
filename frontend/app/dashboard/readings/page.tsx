@@ -12,9 +12,16 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ArchiveBoxIcon,
-  ScaleIcon
+  ScaleIcon,
+  HeartIcon,
+  SparklesIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  UserIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { authenticatedFetch } from '../../lib/auth'
+import { useRouter } from 'next/navigation'
 
 interface Reading {
   id: string
@@ -37,19 +44,26 @@ interface ReadingAnalytics {
 }
 
 export default function ReadingsPage() {
+  const router = useRouter()
   const [readings, setReadings] = useState<Reading[]>([])
   const [analytics, setAnalytics] = useState<ReadingAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d')
+  const [backendStatus, setBackendStatus] = useState<'connected' | 'disconnected' | 'unknown'>('connected')
+  const [userProfile, setUserProfile] = useState<{ full_name?: string } | null>(null)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+
 
   const fetchReadings = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Convert time range to hours
-      const hours = timeRange === '24h' ? 24 : timeRange === '7d' ? 168 : 720
+      // Fixed to 7 days (168 hours)
+      const hours = 168
 
       // Fetch readings from analytics endpoint (requires auth)
       const response = await authenticatedFetch(`/analytics/readings?hours=${hours}&limit=100`)
@@ -82,20 +96,20 @@ export default function ReadingsPage() {
     }
 
     // Calculate averages
-    const avgPh = readingsData.reduce((sum, r) => sum + r.ph, 0) / readingsData.length
-    const avgHydration = readingsData.reduce((sum, r) => sum + r.hydration_ml, 0) / readingsData.length
+    const avgPh = readingsData.reduce((sum, r) => sum + (r.ph || 0), 0) / readingsData.length
+    const avgHydration = readingsData.reduce((sum, r) => sum + (r.hydration_ml || 0), 0) / readingsData.length
 
     // Calculate trends (compare first half vs second half)
     const midPoint = Math.floor(readingsData.length / 2)
     const firstHalf = readingsData.slice(0, midPoint)
     const secondHalf = readingsData.slice(midPoint)
 
-    const firstHalfPh = firstHalf.reduce((sum, r) => sum + r.ph, 0) / firstHalf.length
-    const secondHalfPh = secondHalf.reduce((sum, r) => sum + r.ph, 0) / secondHalf.length
+    const firstHalfPh = firstHalf.reduce((sum, r) => sum + (r.ph || 0), 0) / firstHalf.length
+    const secondHalfPh = secondHalf.reduce((sum, r) => sum + (r.ph || 0), 0) / secondHalf.length
     const phDiff = secondHalfPh - firstHalfPh
 
-    const firstHalfHydration = firstHalf.reduce((sum, r) => sum + r.hydration_ml, 0) / firstHalf.length
-    const secondHalfHydration = secondHalf.reduce((sum, r) => sum + r.hydration_ml, 0) / secondHalf.length
+    const firstHalfHydration = firstHalf.reduce((sum, r) => sum + (r.hydration_ml || 0), 0) / firstHalf.length
+    const secondHalfHydration = secondHalf.reduce((sum, r) => sum + (r.hydration_ml || 0), 0) / secondHalf.length
     const hydrationDiff = secondHalfHydration - firstHalfHydration
 
     // Determine trends
@@ -125,6 +139,14 @@ export default function ReadingsPage() {
     return { text: 'Needs Attention', color: 'text-red-600', bgColor: 'bg-red-100' }
   }
 
+  const getReadingHealthStatus = (ph: number, colorScore: number) => {
+    // Calculate a simple health score based on pH and color
+    const phScore = (ph >= 6.5 && ph <= 7.5) ? 80 : (ph >= 6.0 && ph <= 8.0) ? 60 : 40
+    const colorScorePoints = colorScore <= 1.0 ? 80 : colorScore <= 2.0 ? 60 : 40
+    const overallScore = (phScore + colorScorePoints) / 2
+    return getHealthStatus(overallScore)
+  }
+
   const getPHStatus = (ph: number) => {
     if (ph >= 6.5 && ph <= 7.5) return { text: 'Optimal', color: 'text-green-600', icon: CheckCircleIcon }
     if (ph >= 6.0 && ph <= 8.0) return { text: 'Good', color: 'text-blue-600', icon: CheckCircleIcon }
@@ -145,308 +167,457 @@ export default function ReadingsPage() {
     return isGoodUp ? 'text-red-500' : 'text-green-500'
   }
 
-  useEffect(() => {
-    fetchReadings()
-  }, [timeRange])
+  // Pagination calculations
+  const totalPages = Math.ceil(readings.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedReadings = readings.slice(startIndex, endIndex)
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
     }
   }
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.3 }
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
     }
+  }
+
+  // Load user profile for navbar
+  useEffect(() => {
+    const loadNavUserProfile = async () => {
+      try {
+        const userData = localStorage.getItem('puma_user_data')
+        if (userData) {
+          const parsed = JSON.parse(userData)
+          setUserProfile({
+            full_name: parsed.profile?.full_name
+          })
+        }
+      } catch (error) {
+        console.error('Error loading nav user profile:', error)
+      }
+    }
+    loadNavUserProfile()
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('puma_access_token')
+    localStorage.removeItem('puma_refresh_token')
+    localStorage.removeItem('puma_user_data')
+    router.push('/login')
+  }
+
+  useEffect(() => {
+    fetchReadings()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-blue-600">Loading readings...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={fetchReadings}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 md:p-6"
-    >
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <motion.div variants={itemVariants} className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            Health Readings
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Comprehensive analysis of your hydration and pH levels
-          </p>
-        </motion.div>
-
-        {/* Time Range Selector */}
-        <motion.div variants={itemVariants} className="flex justify-center mb-6">
-          <div className="bg-white rounded-xl p-1 shadow-lg border border-gray-200">
-            {(['24h', '7d', '30d'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  timeRange === range
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                {range === '24h' ? 'Last 24h' : range === '7d' ? 'Last 7 days' : 'Last 30 days'}
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Loading State */}
-        <AnimatePresence>
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex justify-center items-center py-12"
-            >
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Error State */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-red-50 border border-red-200 rounded-xl p-6 text-center"
-            >
-              <ExclamationTriangleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-red-800 mb-2">Unable to Load Readings</h3>
-              <p className="text-red-600 mb-4">{error}</p>
-              <button
-                onClick={fetchReadings}
-                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              >
-                Try Again
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Analytics Dashboard */}
-        <AnimatePresence>
-          {analytics && !loading && (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="space-y-6"
-            >
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Total Readings */}
-                <motion.div variants={itemVariants} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-500 text-sm font-medium">Total Readings</p>
-                      <p className="text-2xl font-bold text-gray-900">{analytics.totalReadings}</p>
-                    </div>
-                    <BeakerIcon className="w-8 h-8 text-purple-500" />
-                  </div>
-                </motion.div>
-
-                {/* Average pH */}
-                <motion.div variants={itemVariants} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-gray-500 text-sm font-medium">Average pH</p>
-                      <p className="text-2xl font-bold text-gray-900">{analytics.avgPh}</p>
-                    </div>
-                    <ScaleIcon className="w-8 h-8 text-blue-500" />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {React.createElement(getTrendIcon(analytics.phTrend), {
-                      className: `w-4 h-4 ${getTrendColor(analytics.phTrend, false)}`
-                    })}
-                    <span className={`text-xs font-medium ${getPHStatus(analytics.avgPh).color}`}>
-                      {getPHStatus(analytics.avgPh).text}
-                    </span>
-                  </div>
-                </motion.div>
-
-                {/* Average Hydration */}
-                <motion.div variants={itemVariants} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-gray-500 text-sm font-medium">Avg Hydration</p>
-                      <p className="text-2xl font-bold text-gray-900">{analytics.avgHydration}ml</p>
-                    </div>
-                    <ArchiveBoxIcon className="w-8 h-8 text-cyan-500" />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {React.createElement(getTrendIcon(analytics.hydrationTrend), {
-                      className: `w-4 h-4 ${getTrendColor(analytics.hydrationTrend, true)}`
-                    })}
-                    <span className="text-xs font-medium text-gray-600">
-                      {analytics.hydrationTrend === 'up' ? 'Increasing' : 
-                       analytics.hydrationTrend === 'down' ? 'Decreasing' : 'Stable'}
-                    </span>
-                  </div>
-                </motion.div>
-
-                {/* Health Score */}
-                <motion.div variants={itemVariants} className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-gray-500 text-sm font-medium">Health Score</p>
-                      <p className="text-2xl font-bold text-gray-900">{analytics.healthScore}/100</p>
-                    </div>
-                    <CheckCircleIcon className="w-8 h-8 text-green-500" />
-                  </div>
-                  <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getHealthStatus(analytics.healthScore).bgColor} ${getHealthStatus(analytics.healthScore).color}`}>
-                    {getHealthStatus(analytics.healthScore).text}
-                  </div>
-                </motion.div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <header className="hidden md:block bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-end items-center h-16">
+            <div className="flex items-center space-x-4">
+              {/* Connection Status */}
+              <div className="flex items-center space-x-2 bg-green-100 px-3 py-1.5 rounded-full border border-green-300">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-xs font-medium text-green-700">
+                  {backendStatus === 'connected' ? 'System Online' : 'System Offline'}
+                </span>
               </div>
 
-              {/* Recent Readings Table */}
-              <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <ClockIcon className="w-5 h-5 mr-2 text-gray-500" />
-                    Recent Readings
-                  </h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Timestamp
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          pH Level
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Hydration
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Color Score
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {readings.slice(0, 10).map((reading, index) => {
-                        const phStatus = getPHStatus(reading.ph)
-                        return (
-                          <motion.tr
-                            key={reading.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="hover:bg-gray-50 transition-colors"
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Date(reading.timestamp).toLocaleString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`text-sm font-medium ${phStatus.color}`}>
-                                {reading.ph.toFixed(2)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {reading.hydration_ml}ml
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {reading.color_score || 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center space-x-2">
-                                {React.createElement(phStatus.icon, {
-                                  className: `w-4 h-4 ${phStatus.color}`
-                                })}
-                                <span className={`text-xs font-medium ${phStatus.color}`}>
-                                  {phStatus.text}
-                                </span>
-                              </div>
-                            </td>
-                          </motion.tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </motion.div>
-
-              {/* Health Insights */}
-              <motion.div variants={itemVariants} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <ChartBarIcon className="w-5 h-5 mr-2 text-blue-600" />
-                  Health Insights
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-800">pH Analysis</h4>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>• Optimal pH range: 6.5 - 7.5</p>
-                      <p>• Your average: {analytics.avgPh}</p>
-                      <p>• Status: <span className={`font-medium ${getPHStatus(analytics.avgPh).color}`}>
-                        {getPHStatus(analytics.avgPh).text}
-                      </span></p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-800">Hydration Analysis</h4>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>• Recommended: 300-500ml per reading</p>
-                      <p>• Your average: {analytics.avgHydration}ml</p>
-                      <p>• Trend: <span className="font-medium">
-                        {analytics.hydrationTrend === 'up' ? '📈 Improving' : 
-                         analytics.hydrationTrend === 'down' ? '📉 Declining' : '➡️ Stable'}
-                      </span></p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* No Data State */}
-        <AnimatePresence>
-          {!loading && !error && (!readings || readings.length === 0) && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center py-12"
-            >
-              <BeakerIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Readings Found</h3>
-              <p className="text-gray-600 mb-6">
-                No health readings found for the selected time period. Start taking readings to see your data here.
-              </p>
+              {/* User Profile Button */}
               <button
-                onClick={fetchReadings}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                onClick={() => router.push('/dashboard/profile')}
+                className="flex items-center space-x-2 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm transition-colors"
               >
-                Refresh Data
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <UserIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-900 max-w-[120px] truncate">
+                  {userProfile?.full_name || 'User'}
+                </span>
               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
+              >
+                <ArrowRightOnRectangleIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="p-4 md:p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="text-center">
+          <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-3">
+            Health Readings
+          </h1>
+          <p className="text-blue-700/80 text-lg">Recent health data and analytics</p>
+        </div>
+              </div>
+
+
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <ArchiveBoxIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Total Readings</h3>
+                <p className="text-xs text-slate-600">All time</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-blue-800">
+            {readings.length}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center shadow-lg">
+                <ScaleIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Avg pH</h3>
+                <p className="text-xs text-slate-600">Overall</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-blue-800">
+            {analytics?.avgPh ? analytics.avgPh.toFixed(2) : 'N/A'}
+          </div>
+          <div className="flex items-center space-x-1 mt-2">
+            {analytics?.phTrend === 'up' ? (
+              <ArrowTrendingUpIcon className="w-4 h-4 text-blue-600" />
+            ) : analytics?.phTrend === 'down' ? (
+              <ArrowTrendingDownIcon className="w-4 h-4 text-blue-800" />
+            ) : (
+              <div className="w-4 h-4" />
+            )}
+            <span className="text-sm text-slate-600">
+              {analytics?.phTrend === 'up' ? 'Improving' : analytics?.phTrend === 'down' ? 'Declining' : 'Stable'}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                <BeakerIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Color Score</h3>
+                <p className="text-xs text-slate-600">Average</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-blue-800">
+            {analytics?.lastReading?.color_score != null ? analytics.lastReading.color_score.toFixed(1) : 'N/A'}
+          </div>
+          <div className="flex items-center space-x-1 mt-2">
+            {analytics?.lastReading?.color_score != null ? (
+              analytics?.lastReading?.color_score > 1.0 ? (
+                <ArrowTrendingUpIcon className="w-4 h-4 text-blue-600" />
+              ) : (
+                <ArrowTrendingDownIcon className="w-4 h-4 text-blue-800" />
+              )
+            ) : (
+              <div className="w-4 h-4" />
+            )}
+            <span className="text-sm text-slate-600">
+              {analytics?.lastReading?.color_score != null ? (
+                analytics?.lastReading?.color_score > 1.0 ? 'Improving' : 'Declining'
+              ) : 'Stable'}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-800 rounded-xl flex items-center justify-center shadow-lg">
+                <HeartIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Health Score</h3>
+                <p className="text-xs text-slate-600">Current</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-blue-800">
+            {analytics?.healthScore || 0}/100
+          </div>
+          <div className="w-full bg-blue-100 rounded-full h-2 mt-3">
+            <div 
+              className="bg-blue-600 h-2 rounded-full"
+              style={{ width: `${analytics?.healthScore || 0}%` }}
+            />
+          </div>
+        </div>
       </div>
-    </motion.div>
+
+      {/* Recent Readings Table */}
+      <div className="bg-white rounded-2xl shadow-lg border border-blue-200 mb-8">
+        <div className="px-6 py-4 border-b border-blue-200/30">
+          <h3 className="text-xl font-semibold text-blue-900 flex items-center">
+            <ClockIcon className="w-6 h-6 mr-3 text-blue-600" />
+            Recent Readings
+          </h3>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-blue-200/30">
+                <th className="text-left py-4 px-6 text-sm font-semibold text-blue-800">Date & Time</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-blue-800">pH Level</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-blue-800">Color Score</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-blue-800">Hydration</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-blue-800">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {readings.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-12 text-blue-600/60">
+                    <BeakerIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg">No readings available</p>
+                    <p className="text-sm">Start taking health measurements to see your data here</p>
+                  </td>
+                </tr>
+              ) : (
+                paginatedReadings.map((reading, index) => (
+                  <tr
+                    key={reading.id}
+                    className="border-b border-blue-200 hover:bg-blue-50"
+                  >
+                    <td className="py-4 px-6 text-blue-900">
+                      <div className="font-medium">
+                        {new Date(reading.timestamp).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-blue-700/70">
+                        {new Date(reading.timestamp).toLocaleTimeString()}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${getPHStatus(reading.ph || 0).icon === CheckCircleIcon ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                        <span className="text-blue-900 font-medium">{reading.ph ? reading.ph.toFixed(2) : 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${reading.color_score <= 1.0 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                        <span className="text-blue-900 font-medium">{reading.color_score ? reading.color_score.toFixed(1) : 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-blue-900 font-medium">
+                      {reading.hydration_ml || 0} ml
+                    </td>
+                    <td className="py-4 px-6">
+                      {(() => {
+                        const status = getReadingHealthStatus(reading.ph || 0, reading.color_score || 0)
+                        return (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}>
+                            {status.text}
+                          </span>
+                        )
+                      })()}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination */}
+        {readings.length > itemsPerPage && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-blue-200/30">
+            <div className="flex items-center text-sm text-blue-700">
+              <span>
+                Showing {startIndex + 1} to {Math.min(endIndex, readings.length)} of {readings.length} readings
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {/* Previous Button */}
+              <button
+                onClick={handlePrevious}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg border transition-colors ${
+                  currentPage === 1
+                    ? 'text-blue-400 border-blue-200 cursor-not-allowed'
+                    : 'text-blue-600 border-blue-300 hover:bg-blue-50'
+                }`}
+              >
+                <ChevronLeftIcon className="w-5 h-5" />
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex space-x-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          page === currentPage
+                            ? 'bg-blue-600 text-white'
+                            : 'text-blue-600 hover:bg-blue-50 border border-blue-300'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  } else if (
+                    (page === currentPage - 2 && currentPage > 3) ||
+                    (page === currentPage + 2 && currentPage < totalPages - 2)
+                  ) {
+                    return (
+                      <span key={page} className="px-2 py-2 text-blue-400">
+                        ...
+                      </span>
+                    )
+                  }
+                  return null
+                })}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={handleNext}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg border transition-colors ${
+                  currentPage === totalPages
+                    ? 'text-blue-400 border-blue-200 cursor-not-allowed'
+                    : 'text-blue-600 border-blue-300 hover:bg-blue-50'
+                }`}
+              >
+                <ChevronRightIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Health Insights */}
+      <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+        <h3 className="text-xl font-semibold text-slate-800 mb-6 flex items-center">
+          <SparklesIcon className="w-6 h-6 mr-3 text-blue-600" />
+          Health Insights
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h4 className="text-lg font-medium text-blue-700">pH Balance Analysis</h4>
+            <div className="space-y-3">
+              {readings.filter(r => r.ph >= 6.5 && r.ph <= 7.5).length > 0 && (
+                <div className="flex items-center space-x-3 text-blue-700">
+                  <CheckCircleIcon className="w-5 h-5" />
+                  <span className="text-sm">
+                    {readings.length > 0 ? ((readings.filter(r => r.ph >= 6.5 && r.ph <= 7.5).length / readings.length) * 100).toFixed(0) : 0}% of readings in optimal pH range
+                  </span>
+                </div>
+              )}
+              {analytics?.avgPh && analytics.avgPh > 7.5 && (
+                <div className="flex items-center space-x-3 text-blue-600">
+                  <ExclamationTriangleIcon className="w-5 h-5" />
+                  <span className="text-sm">pH levels trending alkaline - consider balancing</span>
+                </div>
+              )}
+              {analytics?.avgPh && analytics.avgPh < 6.5 && (
+                <div className="flex items-center space-x-3 text-slate-600">
+                  <ExclamationTriangleIcon className="w-5 h-5" />
+                  <span className="text-sm">pH levels trending acidic - increase alkaline intake</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="text-lg font-medium text-blue-800">Color Score Insights</h4>
+            <div className="space-y-3">
+              {analytics?.lastReading?.color_score != null && analytics.lastReading.color_score <= 1.0 && (
+                <div className="flex items-center space-x-3 text-blue-700">
+                  <CheckCircleIcon className="w-5 h-5" />
+                  <span className="text-sm">Excellent color scores - maintain current habits</span>
+                </div>
+              )}
+              {analytics?.lastReading?.color_score != null && analytics.lastReading.color_score > 2.0 && (
+                <div className="flex items-center space-x-3 text-slate-600">
+                  <ExclamationTriangleIcon className="w-5 h-5" />
+                  <span className="text-sm">Consider improving hydration and diet quality</span>
+                </div>
+              )}
+              {analytics?.lastReading?.color_score != null && analytics.lastReading.color_score > 1.0 && analytics.lastReading.color_score <= 2.0 && (
+                <div className="flex items-center space-x-3 text-blue-600">
+                  <ArrowTrendingUpIcon className="w-5 h-5" />
+                  <span className="text-sm">Color scores in moderate range - room for improvement</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation Spacer */}
+      <div className="h-20 md:hidden" />
+      </div>
+    </div>
   )
-} 
+}

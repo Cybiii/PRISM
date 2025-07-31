@@ -2,20 +2,68 @@ import { Express, Request, Response } from 'express';
 import { DatabaseService } from '../services/DatabaseService';
 import { ColorClassificationService } from '../services/ColorClassificationService';
 import { DataProcessingService } from '../services/DataProcessingService';
-import { ApiResponse } from '../types';
-import { logger } from '../utils/logger';
+import { SerialService } from '../services/SerialService';
+import { supabaseService } from '../services/SupabaseService';
 import authRoutes from './auth';
 import analyticsRoutes from './analytics';
+import { logger } from '../utils/logger';
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: string;
+}
 
 interface Services {
   dbService: DatabaseService;
   colorService: ColorClassificationService;
   processingService: DataProcessingService;
-  serialService?: any; // Add serial service for manual readings
+  serialService: SerialService;
+}
+
+/**
+ * Extract user ID from JWT token using Supabase auth
+ */
+async function extractUserIdFromToken(authHeader: string): Promise<string | null> {
+  try {
+    if (!authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+    
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    // Use Supabase to verify the JWT token
+    const { data: { user }, error } = await supabaseService['supabase'].auth.getUser(token);
+    
+    if (error || !user) {
+      logger.warn('Failed to verify JWT token:', error?.message);
+      return null;
+    }
+    
+    logger.debug('Successfully extracted user ID from JWT:', user.id);
+    return user.id;
+  } catch (error) {
+    logger.error('Error extracting user ID from token:', error);
+    return null;
+  }
 }
 
 export function setupRoutes(app: Express, services: Services): void {
   const { dbService, colorService, processingService, serialService } = services;
+
+  // Health check endpoint
+  app.get('/api/health', (req: Request, res: Response) => {
+    res.json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      services: {
+        database: dbService ? 'running' : 'not initialized',
+        serial: serialService ? 'running' : 'not initialized',
+        colorClassification: colorService ? 'running' : 'not initialized'
+      }
+    });
+  });
 
   // Mount authentication routes
   app.use('/api/auth', authRoutes);
@@ -24,7 +72,7 @@ export function setupRoutes(app: Express, services: Services): void {
   app.use('/api/analytics', analyticsRoutes);
 
   // Trigger comprehensive manual sensor reading
-  app.post('/api/readings/manual', async (req: Request, res: Response) => {
+  app.post('/api/readings/manual', async (req: Request, res: Response): Promise<void> => {
     try {
       if (!serialService) {
         const response: ApiResponse = {
@@ -32,44 +80,48 @@ export function setupRoutes(app: Express, services: Services): void {
           error: 'Serial service not available',
           timestamp: new Date().toISOString()
         };
-        return res.status(503).json(response);
+        res.status(503).json(response);
+        return;
       }
 
-      // Extract user ID from Authorization header
+      // Try real authentication first, fallback to mock if needed
+      let userId: string | null = null;
       const authHeader = req.headers.authorization;
-      let userId: string | undefined;
       
       if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
-          // TODO: Implement proper JWT verification to extract user ID
-          // For now, we'll extract from request body or use a demo user
-          userId = req.body.userId || 'demo-user-' + Date.now();
-          logger.info('Manual reading requested by user:', userId);
-        } catch (authError) {
-          logger.warn('Failed to extract user ID from token:', authError);
-          userId = 'anonymous-user-' + Date.now();
+          // Try to use real authentication
+          const token = authHeader.split(' ')[1];
+          userId = await extractUserIdFromToken(authHeader);
+          logger.info(`✅ Real user authenticated: ${userId}`);
+        } catch (error) {
+          logger.warn('Token validation failed, trying development fallback');
         }
-      } else {
-        // No auth header - use demo/anonymous user
-        userId = 'demo-user-' + Date.now();
-        logger.info('Manual reading requested without authentication, using demo user:', userId);
+      }
+      
+      // Development fallback only if real auth failed
+      if (!userId && (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV)) {
+        logger.info('Development mode: Using mock user for manual readings');
+        userId = 'demo-user-123';
+
       }
 
-      // Trigger comprehensive manual reading
-      const result = await serialService.triggerManualReading(userId);
+      logger.info(`Manual reading requested by authenticated user: ${userId}`);
+
+      // Trigger comprehensive manual reading with proper user ID
+      const result = await serialService.triggerManualReading(userId || undefined);
       
       if (result.success) {
         const response: ApiResponse = {
           success: true,
           data: {
-            message: 'Manual reading completed successfully',
             readingData: result.data,
-            collectionTime: '5 seconds',
-            processedBy: 'k-means algorithm'
+            userId: userId
           },
           timestamp: new Date().toISOString()
         };
         res.json(response);
+        return;
       } else {
         const response: ApiResponse = {
           success: false,
@@ -77,16 +129,17 @@ export function setupRoutes(app: Express, services: Services): void {
           timestamp: new Date().toISOString()
         };
         res.status(500).json(response);
+        return;
       }
-      
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error in manual reading endpoint:', error);
       const response: ApiResponse = {
         success: false,
-        error: 'Failed to process manual reading request',
+        error: error.message || 'Internal server error',
         timestamp: new Date().toISOString()
       };
       res.status(500).json(response);
+      return;
     }
   });
 
@@ -150,7 +203,8 @@ export function setupRoutes(app: Express, services: Services): void {
           error: 'Invalid date format. Use ISO 8601 format.',
           timestamp: new Date().toISOString()
         };
-        return res.status(400).json(response);
+        res.status(400).json(response);
+        return;
       }
       
       const readings = await dbService.getReadingsByDateRange(startDate, endDate);
@@ -167,7 +221,8 @@ export function setupRoutes(app: Express, services: Services): void {
         error: 'Failed to get readings',
         timestamp: new Date().toISOString()
       };
-      return res.status(500).json(response);
+      res.status(500).json(response);
+      return;
     }
   });
 
@@ -203,7 +258,8 @@ export function setupRoutes(app: Express, services: Services): void {
           error: 'Score must be between 1 and 10',
           timestamp: new Date().toISOString()
         };
-        return res.status(400).json(response);
+        res.status(400).json(response);
+        return;
       }
       
       const recommendations = colorService.getHealthRecommendations(score);
@@ -220,7 +276,8 @@ export function setupRoutes(app: Express, services: Services): void {
         error: 'Failed to get recommendations',
         timestamp: new Date().toISOString()
       };
-      return res.status(500).json(response);
+      res.status(500).json(response);
+      return;
     }
   });
 
@@ -259,7 +316,8 @@ export function setupRoutes(app: Express, services: Services): void {
           error: 'Invalid data format. Expected: { ph: number, color: { r, g, b } }',
           timestamp: new Date().toISOString()
         };
-        return res.status(400).json(response);
+        res.status(400).json(response);
+        return;
       }
       
       await processingService.simulateReading(ph, color);
@@ -277,7 +335,8 @@ export function setupRoutes(app: Express, services: Services): void {
         error: 'Failed to simulate reading',
         timestamp: new Date().toISOString()
       };
-      return res.status(500).json(response);
+      res.status(500).json(response);
+      return;
     }
   });
 
@@ -364,6 +423,75 @@ export function setupRoutes(app: Express, services: Services): void {
       const response: ApiResponse = {
         success: false,
         error: 'Failed to get analytics',
+        timestamp: new Date().toISOString()
+      };
+      res.status(500).json(response);
+    }
+  });
+
+  // 🎛️ Mock Data Control Endpoints
+  app.post('/api/mock-data/enable', (req: Request, res: Response) => {
+    try {
+      services.serialService.enableMockData();
+      
+      const response: ApiResponse = {
+        success: true,
+        data: { enabled: true, message: '🔄 Automatic mock data generation enabled' },
+        timestamp: new Date().toISOString()
+      };
+      res.json(response);
+      logger.info('Mock data generation enabled via API');
+    } catch (error) {
+      logger.error('Error enabling mock data:', error);
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to enable mock data generation',
+        timestamp: new Date().toISOString()
+      };
+      res.status(500).json(response);
+    }
+  });
+
+  app.post('/api/mock-data/disable', (req: Request, res: Response) => {
+    try {
+      services.serialService.disableMockData();
+      
+      const response: ApiResponse = {
+        success: true,
+        data: { enabled: false, message: '🚫 Automatic mock data generation disabled' },
+        timestamp: new Date().toISOString()
+      };
+      res.json(response);
+      logger.info('Mock data generation disabled via API');
+    } catch (error) {
+      logger.error('Error disabling mock data:', error);
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to disable mock data generation',
+        timestamp: new Date().toISOString()  
+      };
+      res.status(500).json(response);
+    }
+  });
+
+  app.get('/api/mock-data/status', (req: Request, res: Response) => {
+    try {
+      const enabled = services.serialService.isMockDataEnabled();
+      
+      const response: ApiResponse = {
+        success: true,
+        data: { 
+          enabled,
+          status: enabled ? 'Mock data generation is running' : 'Mock data generation is stopped'
+        },
+        timestamp: new Date().toISOString()
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Error getting mock data status:', error);
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to get mock data status',
         timestamp: new Date().toISOString()
       };
       res.status(500).json(response);

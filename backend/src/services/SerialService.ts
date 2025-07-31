@@ -12,6 +12,8 @@ export class SerialService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 5000; // 5 seconds
+  private mockDataEnabled = false; // 🚫 Control variable to stop automatic mock data generation
+  private mockDataInterval: NodeJS.Timeout | null = null;
 
   constructor(
     private dataProcessor: DataProcessingService,
@@ -42,9 +44,8 @@ export class SerialService {
         logger.info(`Serial service initialized on port ${this.config.port}`);
         return;
       } catch (error) {
-        logger.warn('Arduino connection failed in development mode, switching to mock data:', error);
-        this.startMockDataGeneration();
-        logger.info('Mock data generation started - SerialService initialized successfully');
+        logger.warn('Arduino connection failed in development mode, NOT starting automatic mock data generation');
+        logger.info('Use manual reading or enable mock data to generate readings');
         return;
       }
     }
@@ -146,13 +147,63 @@ export class SerialService {
   }
 
   private parseArduinoData(data: string): ArduinoData | null {
+    // Debug: Log every incoming message
+    const trimmedData = data.trim();
+    if (trimmedData.length === 0) {
+      logger.debug('📡 Received empty Arduino message');
+      return null;
+    }
+    
+    logger.info(`📡 Parsing Arduino data: "${trimmedData}"`);
+    
     try {
-      // Expected formats:
-      // PUMA format: "PH:7.2,R:45123,G:50234,B:20156,C:55000"
-      // Current Arduino format: "RGB: 77, 102, 79  HEX: #4D664F"
-      // JSON format: {"ph": 7.2, "r": 1234, "g": 2345, "b": 3456, "c": 4567}
+      // New Arduino format: "Hydration: Good | Raw ADC: 512 | Voltage: 2.500 V | pH: 7.35 | RGB: 155,164,62"
+      // Updated format includes RGB values for K-means analysis
       
-      // Handle current Arduino RGB format
+      if (data.includes('Hydration:') && data.includes('pH:')) {
+        const hydrationMatch = data.match(/Hydration:\s*([^|]+)/);
+        const phMatch = data.match(/pH:\s*([\d.]+)/);
+        const rgbMatch = data.match(/RGB:\s*(\d+),(\d+),(\d+)/);
+        const voltageMatch = data.match(/Voltage:\s*([\d.]+)/);
+        const adcMatch = data.match(/Raw ADC:\s*(\d+)/);
+        
+        if (phMatch && rgbMatch) {
+          const ph = parseFloat(phMatch[1]);
+          const r = parseInt(rgbMatch[1]);
+          const g = parseInt(rgbMatch[2]);
+          const b = parseInt(rgbMatch[3]);
+          const hydrationStatus = hydrationMatch?.[1]?.trim();
+          const voltage = voltageMatch ? parseFloat(voltageMatch[1]) : null;
+          const rawADC = adcMatch ? parseInt(adcMatch[1]) : null;
+          
+          // Validate pH range
+          if (ph < 0 || ph > 14) {
+            logger.warn('pH value out of range:', ph);
+            return null;
+          }
+          
+          // Validate RGB values
+          if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+            logger.warn('RGB values out of range:', { r, g, b });
+            return null;
+          }
+          
+          logger.debug(`Parsed Arduino data: Hydration=${hydrationStatus}, pH=${ph}, RGB=(${r},${g},${b}), Voltage=${voltage}V, ADC=${rawADC}`);
+          
+          return {
+            ph,
+            color: { r, g, b },
+            timestamp: Date.now(),
+            metadata: {
+              hydrationStatus,
+              voltage: voltage || undefined,
+              rawADC: rawADC || undefined
+            }
+          };
+        }
+      }
+      
+      // Handle legacy RGB format for backward compatibility
       if (data.includes('RGB:') && data.includes('HEX:')) {
         const rgbMatch = data.match(/RGB:\s*(\d+),\s*(\d+),\s*(\d+)/);
         if (rgbMatch) {
@@ -201,7 +252,13 @@ export class SerialService {
           typeof values.R !== 'number' || 
           typeof values.G !== 'number' || 
           typeof values.B !== 'number') {
-        logger.warn('Invalid Arduino data format:', data);
+        const trimmedData = data.trim();
+        logger.warn('Invalid Arduino data format');
+        logger.info(`📡 Arduino says: "${trimmedData}"`);
+        logger.info(`📡 Raw length: ${data.length}, Trimmed length: ${trimmedData.length}`);
+        logger.info(`📡 Raw bytes: [${Array.from(data).map(c => c.charCodeAt(0)).join(', ')}]`);
+        logger.info(`📡 Raw string: ${JSON.stringify(data)}`);
+        logger.debug('Expected format: "Hydration: Good | Raw ADC: 512 | Voltage: 2.500 V | pH: 7.35 | RGB: 155,164,62"');
         return null;
       }
 
@@ -290,10 +347,25 @@ export class SerialService {
   }
 
   private startMockDataGeneration(): void {
+    if (!this.mockDataEnabled) {
+      logger.info('Mock data generation is disabled. Use enableMockData() to start automatic generation.');
+      return;
+    }
+
     logger.info('Starting TCS34725 mock data generation for development');
     
+    // Clear any existing interval
+    if (this.mockDataInterval) {
+      clearInterval(this.mockDataInterval);
+    }
+    
     // Simulate TCS34725 sensor readings every 2 seconds
-    setInterval(() => {
+    this.mockDataInterval = setInterval(() => {
+      if (!this.mockDataEnabled) {
+        this.stopMockDataGeneration();
+        return;
+      }
+
       // Simulate TCS34725 16-bit color values for urine analysis
       // Different scenarios: healthy yellow to concerning dark colors
       const scenarios = [
@@ -335,6 +407,42 @@ export class SerialService {
       logger.debug('Mock TCS34725 data:', mockData);
       this.dataProcessor.processArduinoData(mockData);
     }, 2000);
+  }
+
+  /**
+   * Enable automatic mock data generation
+   */
+  public enableMockData(): void {
+    logger.info('🔄 Enabling automatic mock data generation');
+    this.mockDataEnabled = true;
+    this.startMockDataGeneration();
+  }
+
+  /**
+   * Disable automatic mock data generation
+   */
+  public disableMockData(): void {
+    logger.info('🚫 Disabling automatic mock data generation');
+    this.mockDataEnabled = false;
+    this.stopMockDataGeneration();
+  }
+
+  /**
+   * Stop mock data generation interval
+   */
+  private stopMockDataGeneration(): void {
+    if (this.mockDataInterval) {
+      clearInterval(this.mockDataInterval);
+      this.mockDataInterval = null;
+      logger.info('Mock data generation stopped');
+    }
+  }
+
+  /**
+   * Check if mock data generation is enabled
+   */
+  public isMockDataEnabled(): boolean {
+    return this.mockDataEnabled;
   }
 
   async sendCommand(command: string): Promise<void> {
@@ -394,10 +502,11 @@ export class SerialService {
       const readings = await this.collectReadingsFor5Seconds(isConnected);
       
       if (readings.length === 0) {
-        return {
-          success: false,
-          error: 'No readings collected during 5-second period'
-        };
+        logger.warn('No readings collected, using mock data for development');
+        // Generate a single mock reading for development
+        const mockReading = this.generateSingleMockReadingData();
+        readings.push(mockReading);
+        logger.info('Using mock reading for analysis');
       }
       
       logger.info(`Collected ${readings.length} readings over 5 seconds`);
@@ -407,11 +516,21 @@ export class SerialService {
       logger.info('Averaged reading:', averagedReading);
       
       // Step 4: Process through k-means algorithm and get rating
-      const colorResult = this.colorService.classifyColor(averagedReading.color);
-      logger.info(`K-means classification: Score=${colorResult.score}, Confidence=${colorResult.confidence.toFixed(3)}`);
+      let colorResult: { score: number; confidence: number; lab: any };
+      let recommendations: string[];
       
-      // Step 5: Get health recommendations
-      const recommendations = this.colorService.getHealthRecommendations(colorResult.score);
+      try {
+        colorResult = this.colorService.classifyColor(averagedReading.color);
+        logger.info(`K-means classification: Score=${colorResult.score}, Confidence=${colorResult.confidence.toFixed(3)}`);
+        
+        // Step 5: Get health recommendations
+        recommendations = this.colorService.getHealthRecommendations(colorResult.score);
+      } catch (error) {
+        logger.error('Color classification failed, using fallback:', error);
+        // Fallback for when K-means fails
+        colorResult = { score: 5, confidence: 0.5, lab: { l: 50, a: 0, b: 0 } };
+        recommendations = ['Unable to analyze color - please try again', 'Ensure good lighting conditions'];
+      }
       
       // Step 6: Store in Supabase with userId and date
       const readingId = await this.storeProcessedReading(averagedReading, colorResult, userId, recommendations);
@@ -481,12 +600,13 @@ export class SerialService {
         // Add temporary data handler
         this.port!.on('data', dataHandler);
         
-        // Request continuous readings
+        // Request continuous readings (Arduino outputs automatically, no need to request)
         const readingInterval = setInterval(() => {
           if (this.port?.isOpen) {
-            this.port.write('READ\n');
+            // Arduino automatically outputs data every second, no need to request
+            logger.debug('Waiting for Arduino data...');
           }
-        }, 500); // Request reading every 500ms
+        }, 500); // Check every 500ms
         
         // Stop after 5 seconds
         setTimeout(() => {

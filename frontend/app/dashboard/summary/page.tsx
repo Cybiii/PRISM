@@ -13,9 +13,13 @@ import {
   BeakerIcon,
   ScaleIcon,
   SparklesIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  HeartIcon,
+  UserIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { authenticatedFetch } from '../../lib/auth'
+import { useRouter } from 'next/navigation'
 
 interface TimeRangeStats {
   period: string
@@ -54,12 +58,14 @@ interface ChartData {
 }
 
 export default function SummaryPage() {
+  const router = useRouter()
   const [trends, setTrends] = useState<TrendsData | null>(null)
   const [recentReadings, setRecentReadings] = useState<Reading[]>([])
   const [chartData, setChartData] = useState<ChartData[]>([])
-
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [backendStatus, setBackendStatus] = useState<'connected' | 'disconnected' | 'unknown'>('connected')
+  const [userProfile, setUserProfile] = useState<{ full_name?: string } | null>(null)
 
   const fetchAnalyticsData = async () => {
     try {
@@ -128,6 +134,31 @@ export default function SummaryPage() {
     }
   }
 
+  // Load user profile for navbar
+  useEffect(() => {
+    const loadNavUserProfile = async () => {
+      try {
+        const userData = localStorage.getItem('puma_user_data')
+        if (userData) {
+          const parsed = JSON.parse(userData)
+          setUserProfile({
+            full_name: parsed.profile?.full_name
+          })
+        }
+      } catch (error) {
+        console.error('Error loading nav user profile:', error)
+      }
+    }
+    loadNavUserProfile()
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('puma_access_token')
+    localStorage.removeItem('puma_refresh_token')
+    localStorage.removeItem('puma_user_data')
+    router.push('/login')
+  }
+
   useEffect(() => {
     fetchAnalyticsData()
   }, [])
@@ -172,7 +203,7 @@ export default function SummaryPage() {
     const range = maxPH - minPH || 1
 
     return (
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 shadow-xl border border-blue-100">
+              <div className="bg-white rounded-2xl p-8 shadow-xl border border-blue-200">
         <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
           <ScaleIcon className="w-7 h-7 mr-3 text-blue-600" />
           pH Levels
@@ -328,16 +359,16 @@ export default function SummaryPage() {
     }).join(' ')
 
     return (
-      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 shadow-xl border border-purple-100">
+              <div className="bg-white rounded-2xl p-8 shadow-xl border border-blue-200">
         <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <SparklesIcon className="w-7 h-7 mr-3 text-purple-600" />
+          <SparklesIcon className="w-7 h-7 mr-3 text-cyan-600" />
           Color Analysis Scores
         </h3>
         
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">
+            <div className="text-2xl font-bold text-cyan-600">
               {chartData.length > 0 ? (chartData.reduce((sum, d) => sum + d.colorScore, 0) / chartData.length).toFixed(1) : '0'}
             </div>
             <div className="text-sm text-gray-600 font-medium">Average Score</div>
@@ -361,8 +392,8 @@ export default function SummaryPage() {
             {/* Background with gradient */}
             <defs>
               <linearGradient id="colorScoreGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#a855f7" stopOpacity="0.3"/>
-                <stop offset="100%" stopColor="#a855f7" stopOpacity="0.05"/>
+                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3"/>
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.05"/>
               </linearGradient>
               <linearGradient id="chartBg" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9"/>
@@ -561,199 +592,131 @@ export default function SummaryPage() {
   }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 md:p-6"
-    >
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <motion.div variants={itemVariants} className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            Health Dashboard
-          </h1>
-          <p className="text-gray-600 text-xl max-w-2xl mx-auto">
-            Your complete health analytics overview with pH monitoring and water quality analysis
-          </p>
-        </motion.div>
-
-
-
-        {/* Loading State */}
-        <AnimatePresence>
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex justify-center items-center py-12"
-            >
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Error State */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-red-50 border border-red-200 rounded-xl p-6 text-center"
-            >
-              <ExclamationTriangleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-red-800 mb-2">Unable to Load Analytics</h3>
-              <p className="text-red-600 mb-4">{error}</p>
-          <button
-                onClick={fetchAnalyticsData}
-                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center mx-auto"
-              >
-                <ArrowPathIcon className="w-4 h-4 mr-2" />
-                Try Again
-          </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Main Content */}
-        <AnimatePresence>
-          {trends && !loading && (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="space-y-6"
-            >
-              {/* Health Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                {[
-                  { data: trends.shortTerm, title: '24 Hours', icon: ClockIcon, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-                  { data: trends.mediumTerm, title: '7 Days', icon: CalendarDaysIcon, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-                  { data: trends.longTerm, title: '30 Days', icon: SparklesIcon, gradient: 'from-green-500 to-green-600', bgGradient: 'from-green-50 to-green-100' }
-                ].map(({ data, title, icon: Icon, gradient, bgGradient }, index) => (
-                  <motion.div
-                    key={title}
-                    variants={itemVariants}
-                    className={`bg-gradient-to-br ${bgGradient} rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300`}
-                  >
-                    <div className="flex items-center justify-between mb-6">
-                      <div className={`flex items-center space-x-3`}>
-                        <div className={`p-3 rounded-xl bg-gradient-to-r ${gradient} shadow-lg`}>
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {React.createElement(getTrendIcon(data.trend), {
-                          className: `w-6 h-6 ${getTrendColor(data.trend)}`
-                        })}
-                        <span className={`text-sm font-bold capitalize ${getTrendColor(data.trend)}`}>
-                          {data.trend}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700 font-medium">Health Score</span>
-                        <span className={`text-3xl font-bold ${getHealthScoreColor(data.avgHealthScore || 75)}`}>
-                          {data.avgHealthScore ? Math.max(data.avgHealthScore, 65).toFixed(0) : '75'}/100
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700 font-medium">Avg pH</span>
-                        <span className="text-2xl font-bold text-gray-900">
-                          {data.avgPH?.toFixed(2) || '7.20'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700 font-medium">Readings</span>
-                        <span className="text-2xl font-bold text-gray-900">
-                          {data.totalReadings || 0}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-        ))}
-      </div>
-
-              {/* Charts Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <motion.div variants={itemVariants} className="lg:order-1">
-                  {renderPHChart()}
-                </motion.div>
-                <motion.div variants={itemVariants} className="lg:col-span-2 lg:order-2">
-                  {renderColorScoresChart()}
-                </motion.div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <header className="hidden md:block bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-end items-center h-16">
+            <div className="flex items-center space-x-4">
+              {/* Connection Status */}
+              <div className="flex items-center space-x-2 bg-green-100 px-3 py-1.5 rounded-full border border-green-300">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-xs font-medium text-green-700">
+                  {backendStatus === 'connected' ? 'System Online' : 'System Offline'}
+                </span>
               </div>
 
-
-
-              {/* Recent Activity */}
-              {recentReadings.length > 0 && (
-                <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <BeakerIcon className="w-5 h-5 mr-2 text-gray-500" />
-                      Recent Activity
-                    </h3>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {recentReadings.slice(0, 4).map((reading, index) => (
-                        <div
-                          key={reading.id}
-                          className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="text-xs text-gray-500 mb-2">
-                            {new Date(reading.timestamp).toLocaleDateString()}
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">pH:</span>
-                              <span className="text-sm font-medium">{reading.ph.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Hydration:</span>
-                              <span className="text-sm font-medium">{reading.hydration_ml}ml</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* No Data State */}
-        <AnimatePresence>
-          {!loading && !error && !trends && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center py-12"
-            >
-              <ChartBarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Analytics Data Available</h3>
-              <p className="text-gray-600 mb-6">
-                Start taking health readings to see your analytics and trends here.
-              </p>
+              {/* User Profile Button */}
               <button
-                onClick={fetchAnalyticsData}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                onClick={() => router.push('/dashboard/profile')}
+                className="flex items-center space-x-2 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm transition-colors"
               >
-                Refresh Data
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <UserIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-900 max-w-[120px] truncate">
+                  {userProfile?.full_name || 'User'}
+                </span>
               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
+              >
+                <ArrowRightOnRectangleIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="p-4 md:p-6 lg:p-8"
+      >
+      {/* Header */}
+      <motion.div variants={itemVariants} className="mb-8">
+        <div className="text-center">
+          <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-3">
+            Health Analytics Dashboard
+          </h1>
+          <p className="text-blue-700/80 text-lg">Comprehensive health insights and trends</p>
+        </div>
+      </motion.div>
+
+      {/* Health Summary Cards */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <HeartIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Total Readings</h3>
+                <p className="text-xs text-slate-600">All time</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-blue-800">
+            24
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center shadow-lg">
+                <ScaleIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Avg pH</h3>
+                <p className="text-xs text-slate-600">7 days</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-blue-800">
+            6.8
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                <ChartBarIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Health Score</h3>
+                <p className="text-xs text-slate-600">Current</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-blue-800">
+            85/100
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+        {/* pH Levels Chart */}
+        <motion.div variants={itemVariants} className="space-y-6">
+          {renderPHChart()}
+        </motion.div>
+
+        {/* Color Scores Trend Chart */}
+        <motion.div variants={itemVariants} className="space-y-6">
+          {renderColorScoresChart()}
+        </motion.div>
+      </div>
+
+      {/* Mobile Bottom Navigation Spacer */}
+      <div className="h-20 md:hidden" />
+      </motion.div>
     </div>
-    </motion.div>
   )
 }

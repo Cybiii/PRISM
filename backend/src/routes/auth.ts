@@ -37,8 +37,8 @@ router.post('/signup', async (req: Request, res: Response) => {
           emailConfirmed: userSession.user.email_confirmed_at ? true : false
         },
         profile: userSession.profile,
-        accessToken: userSession.accessToken,
-        refreshToken: userSession.refreshToken
+        access_token: userSession.accessToken,
+        refresh_token: userSession.refreshToken
       }
     });
 
@@ -76,8 +76,8 @@ router.post('/signin', async (req: Request, res: Response) => {
           emailConfirmed: userSession.user.email_confirmed_at ? true : false
         },
         profile: userSession.profile,
-        accessToken: userSession.accessToken,
-        refreshToken: userSession.refreshToken
+        access_token: userSession.accessToken,
+        refresh_token: userSession.refreshToken
       }
     });
 
@@ -132,8 +132,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
           emailConfirmed: newSession.user.email_confirmed_at ? true : false
         },
         profile: newSession.profile,
-        accessToken: newSession.accessToken,
-        refreshToken: newSession.refreshToken
+        access_token: newSession.accessToken,
+        refresh_token: newSession.refreshToken
       }
     });
 
@@ -152,6 +152,55 @@ router.get('/me', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1]; // Bearer token
 
+    // Try real Supabase authentication first
+    if (token) {
+      try {
+        logger.info('🔍 Attempting real Supabase authentication for /auth/me');
+        const currentUser = await userService.getCurrentUser(token);
+
+        if (currentUser) {
+          logger.info('✅ Real Supabase user authenticated:', currentUser.user.email);
+          return res.json({
+            success: true,
+            data: {
+              user: {
+                id: currentUser.user.id,
+                email: currentUser.user.email,
+                emailConfirmed: currentUser.user.email_confirmed_at ? true : false
+              },
+              profile: currentUser.profile
+            }
+          });
+        }
+      } catch (error) {
+        logger.warn('❌ Real authentication failed:', error);
+      }
+    }
+
+    // Development fallback only if real auth failed or no token
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+      logger.info('🔄 Falling back to mock user data for /auth/me');
+      return res.json({
+        success: true,
+        data: {
+          user: {
+            id: 'demo-user-123',
+            email: 'demo@puma-health.com',
+            emailConfirmed: true
+          },
+          profile: {
+            id: 'demo-profile-123',
+            full_name: 'Demo User',
+            age: 25,
+            gender: 'prefer_not_to_say',
+            medical_conditions: [],
+            medications: []
+          }
+        }
+      });
+    }
+
+    // Production: No token provided
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -159,25 +208,10 @@ router.get('/me', async (req: Request, res: Response) => {
       });
     }
 
-    const currentUser = await userService.getCurrentUser(token);
-
-    if (!currentUser) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid or expired token'
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        user: {
-          id: currentUser.user.id,
-          email: currentUser.user.email,
-          emailConfirmed: currentUser.user.email_confirmed_at ? true : false
-        },
-        profile: currentUser.profile
-      }
+    // Production: Invalid token
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid or expired token'
     });
 
   } catch (error: any) {
@@ -195,6 +229,52 @@ router.put('/profile', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
 
+    // Try real Supabase authentication first
+    if (token) {
+      try {
+        logger.info('🔍 Attempting real Supabase authentication for profile update');
+        const currentUser = await userService.getCurrentUser(token);
+        
+        if (currentUser) {
+          logger.info('✅ Real user authenticated for profile update:', currentUser.user.email);
+          const updates = req.body;
+          const updatedProfile = await userService.updateProfile(currentUser.user.id, updates);
+
+          return res.json({
+            success: true,
+            data: updatedProfile
+          });
+        }
+      } catch (error) {
+        logger.warn('❌ Real authentication failed for profile update:', error);
+      }
+    }
+
+    // Development fallback only if real auth failed
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+      logger.info('🔄 Falling back to mock profile update');
+      const { full_name, age, gender, medical_conditions, medications } = req.body;
+      return res.json({
+        success: true,
+        data: {
+          user: {
+            id: 'demo-user-123',
+            email: 'demo@puma-health.com',
+            emailConfirmed: true
+          },
+          profile: {
+            id: 'demo-profile-123',
+            full_name: full_name || 'Demo User',
+            age: age || 25,
+            gender: gender || 'prefer_not_to_say',
+            medical_conditions: medical_conditions || [],
+            medications: medications || []
+          }
+        }
+      });
+    }
+
+    // Production: No token provided
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -202,20 +282,10 @@ router.put('/profile', async (req: Request, res: Response) => {
       });
     }
 
-    const currentUser = await userService.getCurrentUser(token);
-    if (!currentUser) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid or expired token'
-      });
-    }
-
-    const updates = req.body;
-    const updatedProfile = await userService.updateProfile(currentUser.user.id, updates);
-
-    return res.json({
-      success: true,
-      data: updatedProfile
+    // Production: Authentication failed
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid or expired token'
     });
 
   } catch (error: any) {
@@ -251,36 +321,6 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: error.message || 'Password reset failed'
-    });
-  }
-});
-
-// Create Demo User (for testing)
-router.post('/demo', async (req: Request, res: Response) => {
-  try {
-    logger.info('Demo user creation requested');
-    const demoUser = await userService.createDemoUser();
-    logger.info('Demo user created successfully:', demoUser.user.email);
-
-    return res.json({
-      success: true,
-      data: {
-        user: {
-          id: demoUser.user.id,
-          email: demoUser.user.email,
-          emailConfirmed: true
-        },
-        profile: demoUser.profile,
-        accessToken: demoUser.accessToken,
-        refreshToken: demoUser.refreshToken
-      }
-    });
-
-  } catch (error: any) {
-    logger.error('Demo user creation error:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Demo user creation failed'
     });
   }
 });
