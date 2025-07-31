@@ -297,19 +297,20 @@ export class ColorClassificationService {
 
   /**
    * Generate color recommendations based on current score
+   * Score scale: 10 = best (excellent hydration), 1 = worst (critical dehydration)
    */
   getHealthRecommendations(score: number): string[] {
     const recommendations: { [key: number]: string[] } = {
-      1: ["Excellent hydration! Keep up the good work."],
-      2: ["Very good hydration level."],
-      3: ["Good hydration. Continue drinking water regularly."],
-      4: ["Adequate hydration. Consider increasing water intake slightly."],
-      5: ["Fair hydration. Increase water consumption."],
-      6: ["Getting dehydrated. Drink more water throughout the day."],
-      7: ["Concerning dehydration. Increase fluid intake immediately."],
-      8: ["Severely dehydrated. Seek medical attention if symptoms persist.", "Drink water immediately and monitor closely."],
-      9: ["Critical dehydration or possible medical condition.", "Consult healthcare provider immediately."],
-      10: ["Emergency: Severe dehydration or medical condition.", "Seek immediate medical attention."]
+      10: ["Excellent hydration! Keep up the good work."],
+      9: ["Very good hydration level."],
+      8: ["Good hydration. Continue drinking water regularly."],
+      7: ["Adequate hydration. Consider increasing water intake slightly."],
+      6: ["Fair hydration. Increase water consumption."],
+      5: ["Getting dehydrated. Drink more water throughout the day."],
+      4: ["Concerning dehydration. Increase fluid intake immediately."],
+      3: ["Moderate dehydration. Drink water immediately and monitor closely."],
+      2: ["Severe dehydration. Seek medical attention if symptoms persist.", "Drink water immediately and monitor closely."],
+      1: ["Critical dehydration or possible medical condition.", "Seek immediate medical attention."]
     };
 
     return recommendations[score] || ["Consult healthcare provider for interpretation."];

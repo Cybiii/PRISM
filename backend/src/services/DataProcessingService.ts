@@ -85,7 +85,8 @@ export class DataProcessingService {
         }
       } else {
         if (!userId) {
-          logger.warn('⚠️ No user ID provided - data not saved. Authentication required.');
+          // Background Arduino data - silently ignore (expected behavior)
+          logger.debug('Background Arduino data received (not saved - no user context)');
         } else {
           logger.warn(`⚠️ Invalid UUID format: ${userId} - data not saved.`);
         }

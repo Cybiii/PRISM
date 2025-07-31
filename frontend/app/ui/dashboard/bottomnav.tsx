@@ -40,14 +40,7 @@ const navItems = [
     bgColor: 'bg-blue-100',
     isCenter: true
   },
-  {
-    name: 'Insights', 
-    href: '/dashboard/insights',
-    icon: ChartBarIcon,
-    color: 'text-slate-600 hover:text-blue-800',
-    activeColor: 'text-blue-800',
-    bgColor: 'bg-blue-100'
-  },
+
   {
     name: 'Profile',
     href: '/dashboard/profile', 

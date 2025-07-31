@@ -99,17 +99,20 @@ export function setupRoutes(app: Express, services: Services): void {
         }
       }
       
-      // Development fallback only if real auth failed
-      if (!userId && (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV)) {
-        logger.info('Development mode: Using mock user for manual readings');
-        userId = 'demo-user-123';
-
+      // No mock user fallback - require real authentication
+      if (!userId) {
+        logger.warn('Manual reading rejected: No authenticated user ID');
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required for manual readings'
+        });
+        return;
       }
 
       logger.info(`Manual reading requested by authenticated user: ${userId}`);
 
       // Trigger comprehensive manual reading with proper user ID
-      const result = await serialService.triggerManualReading(userId || undefined);
+      const result = await serialService.triggerManualReading(userId);
       
       if (result.success) {
         const response: ApiResponse = {

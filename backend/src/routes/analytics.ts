@@ -14,39 +14,24 @@ declare global {
 
 const router = Router();
 
+// Helper function to convert hydration level to ml for frontend compatibility
+function getHydrationMl(hydrationLevel: string): number {
+  const levels = {
+    'excellent': 2500,
+    'good': 2000,
+    'fair': 1500,
+    'poor': 1000,
+    'critical': 500
+  };
+  return levels[hydrationLevel as keyof typeof levels] || 1500;
+}
+
 // Middleware to extract user ID from token
 async function getUserFromToken(req: Request, res: Response, next: any): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
     
-    // Try real authentication first
-    if (authHeader && authHeader.startsWith('Bearer ') && token) {
-      try {
-        // TODO: Implement real token validation here
-        // For now, we'll extract user info from the token or localStorage
-        logger.info('✅ Real user authentication attempted');
-        
-        // If real auth works, use it
-        // req.user = { id: realUserId, email: realUserEmail };
-        // next();
-        // return;
-      } catch (error) {
-        logger.warn('Real authentication failed, using development fallback');
-      }
-    }
-    
-    // Development fallback only if real auth failed or no token
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      logger.info('Development mode: Using mock user for analytics');
-      req.user = {
-        id: 'demo-user-123',
-        email: 'demo@puma-health.com'
-      };
-      next();
-      return;
-    }
-
     if (!token) {
       res.status(401).json({
         success: false,
@@ -55,17 +40,27 @@ async function getUserFromToken(req: Request, res: Response, next: any): Promise
       return;
     }
 
-    const currentUser = await userService.getCurrentUser(token);
-    if (!currentUser) {
+    try {
+      const currentUser = await userService.getCurrentUser(token);
+      if (!currentUser || !currentUser.user || !currentUser.user.id) {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid or expired token'
+        });
+        return;
+      }
+
+      req.user = currentUser.user;
+      logger.info(`✅ User authenticated: ${req.user.id}`);
+      next();
+    } catch (error) {
+      logger.error('Token validation failed:', error);
       res.status(401).json({
         success: false,
-        error: 'Invalid or expired token'
+        error: 'Authentication failed'
       });
       return;
     }
-
-    req.user = currentUser.user;
-    next();
   } catch (error: any) {
     logger.error('Auth middleware error:', error);
     res.status(401).json({
@@ -191,50 +186,47 @@ router.get('/readings', getUserFromToken, async (req: Request, res: Response) =>
   try {
     const { hours = 24, limit } = req.query;
     
-    // Development mode: Return mock readings data
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      logger.info('Development mode: Returning mock readings data');
+    // Always try to get real database data first
+    logger.info(`Fetching readings for user ${req.user.id} (${hours} hours, limit: ${limit})`);
+    
+    try {
+      const rawReadings = await supabaseService.getReadingsByTimeRange(
+        req.user.id,
+        parseInt(hours as string),
+        limit ? parseInt(limit as string) : undefined
+      );
       
-      const mockReadings = Array.from({ length: Math.min(parseInt(limit as string) || 20, 50) }, (_, i) => ({
-        id: `mock-reading-${i}`,
-        user_id: req.user.id,
-        ph_level: 6.0 + Math.random() * 2.5, // 6.0 to 8.5
-        color_r: Math.floor(120 + Math.random() * 80), // 120-200
-        color_g: Math.floor(140 + Math.random() * 80), // 140-220
-        color_b: Math.floor(40 + Math.random() * 60),  // 40-100
-        color_score: Math.floor(1 + Math.random() * 10), // 1-10
-        confidence: 0.7 + Math.random() * 0.3, // 0.7-1.0
-        device_id: 'arduino-001',
-        created_at: new Date(Date.now() - (i * 60 * 60 * 1000)).toISOString(), // Each reading 1 hour apart
-        recommendations: ['Stay hydrated', 'Monitor pH levels']
+      // Transform database format to frontend format
+      const readings = rawReadings.map(reading => ({
+        id: reading.id || '',
+        timestamp: reading.reading_time,
+        ph: reading.ph,
+        hydration_ml: getHydrationMl(reading.hydration_level), // Convert string to number
+        color_score: reading.health_score,
+        confidence: reading.confidence_score || 0,
+        created_at: reading.created_at || reading.reading_time
       }));
-
+      
+      logger.info(`✅ Found ${readings.length} real readings for user ${req.user.id}`);
+      if (readings.length > 0) {
+        logger.info('✅ Sample transformed reading:', JSON.stringify(readings[0], null, 2));
+      }
+      
       return res.json({
         success: true,
         data: {
-          readings: mockReadings,
-          count: mockReadings.length,
+          readings,
+          count: readings.length,
           timeRange: `${hours} hours`,
+          source: 'database',
           generatedAt: new Date().toISOString()
         }
       });
+      
+    } catch (dbError) {
+      logger.error('Database query failed:', dbError);
+      throw dbError;
     }
-    
-    const readings = await supabaseService.getReadingsByTimeRange(
-      req.user.id,
-      parseInt(hours as string),
-      limit ? parseInt(limit as string) : undefined
-    );
-    
-    return res.json({
-      success: true,
-      data: {
-        readings,
-        count: readings.length,
-        timeRange: `${hours} hours`,
-        generatedAt: new Date().toISOString()
-      }
-    });
 
   } catch (error: any) {
     logger.error('Readings fetch error:', error);
@@ -248,44 +240,36 @@ router.get('/readings', getUserFromToken, async (req: Request, res: Response) =>
 // Get latest reading
 router.get('/latest', getUserFromToken, async (req: Request, res: Response) => {
   try {
-    // Development mode: Return mock latest reading
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      logger.info('Development mode: Returning mock latest reading');
+    // Always try to get real database data first
+    logger.info(`Fetching latest reading for user ${req.user.id}`);
+    
+    try {
+      const latestReading = await supabaseService.getLatestReading(req.user.id);
       
-      const mockLatestReading = {
-        id: `mock-latest-${Date.now()}`,
-        user_id: req.user.id,
-        ph_level: 7.2,
-        color_r: 152,
-        color_g: 164,
-        color_b: 60,
-        color_score: 3,
-        confidence: 0.85,
-        device_id: 'arduino-001',
-        created_at: new Date().toISOString(),
-        recommendations: ['Stay hydrated', 'Monitor pH levels', 'Consider increasing water intake']
-      };
+      if (!latestReading) {
+        logger.info(`No real readings found for user ${req.user.id}`);
+        
 
+        
+        return res.json({
+          success: true,
+          data: null,
+          message: 'No readings found for this user'
+        });
+      }
+      
+      logger.info(`✅ Found latest real reading for user ${req.user.id}: ${latestReading.id}`);
+      
       return res.json({
         success: true,
-        data: mockLatestReading
+        data: latestReading,
+        source: 'database'
       });
+      
+    } catch (dbError) {
+      logger.warn('Failed to fetch latest reading from database:', dbError);
+      throw dbError; // Re-throw to be caught by outer catch
     }
-    
-    const latestReading = await supabaseService.getLatestReading(req.user.id);
-    
-    if (!latestReading) {
-      return res.json({
-        success: true,
-        data: null,
-        message: 'No readings found for this user'
-      });
-    }
-    
-    return res.json({
-      success: true,
-      data: latestReading
-    });
 
   } catch (error: any) {
     logger.error('Latest reading error:', error);
@@ -328,84 +312,57 @@ router.get('/daily', getUserFromToken, async (req: Request, res: Response) => {
 // Health trends analysis
 router.get('/trends', getUserFromToken, async (req: Request, res: Response) => {
   try {
-    // Development mode: Return mock trends data
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      logger.info('Development mode: Returning mock trends data');
-      
-      const mockTrends = {
+    // Always try to get real database data first
+    logger.info(`Fetching trends analysis for user ${req.user.id}`);
+    
+    try {
+      const [stats24h, stats7d, stats30d] = await Promise.all([
+        supabaseService.get24HourStats(req.user.id),
+        supabaseService.get7DayStats(req.user.id),
+        supabaseService.get30DayStats(req.user.id)
+      ]);
+
+      const trends = {
         shortTerm: {
           period: '24 hours',
-          avgHealthScore: 7.2,
-          avgPH: 7.1,
-          totalReadings: 8,
-          trend: 'improving'
+          avgHealthScore: stats24h.avgHealthScore,
+          avgPH: stats24h.avgPH,
+          totalReadings: stats24h.totalReadings,
+          trend: stats24h.trendDirection
         },
         mediumTerm: {
           period: '7 days',
-          avgHealthScore: 6.8,
-          avgPH: 7.0,
-          totalReadings: 45,
-          trend: 'stable'
+          avgHealthScore: stats7d.avgHealthScore,
+          avgPH: stats7d.avgPH,
+          totalReadings: stats7d.totalReadings,
+          trend: stats7d.trendDirection
         },
         longTerm: {
           period: '30 days',
-          avgHealthScore: 6.5,
-          avgPH: 6.9,
-          totalReadings: 180,
-          trend: 'improving'
+          avgHealthScore: stats30d.avgHealthScore,
+          avgPH: stats30d.avgPH,
+          totalReadings: stats30d.totalReadings,
+          trend: stats30d.trendDirection
         },
         overallAssessment: {
-          improving: 2,
-          declining: 0,
-          stable: 1
+          improving: [stats24h, stats7d, stats30d].filter(s => s.trendDirection === 'improving').length,
+          declining: [stats24h, stats7d, stats30d].filter(s => s.trendDirection === 'declining').length,
+          stable: [stats24h, stats7d, stats30d].filter(s => s.trendDirection === 'stable').length
         }
       };
 
+      logger.info(`✅ Generated real trends analysis for user ${req.user.id}`);
+
       return res.json({
         success: true,
-        data: mockTrends
+        data: trends,
+        source: 'database'
       });
+      
+    } catch (dbError) {
+      logger.error('Failed to fetch trends from database:', dbError);
+      throw dbError;
     }
-
-    const [stats24h, stats7d, stats30d] = await Promise.all([
-      supabaseService.get24HourStats(req.user.id),
-      supabaseService.get7DayStats(req.user.id),
-      supabaseService.get30DayStats(req.user.id)
-    ]);
-
-    const trends = {
-      shortTerm: {
-        period: '24 hours',
-        avgHealthScore: stats24h.avgHealthScore,
-        avgPH: stats24h.avgPH,
-        totalReadings: stats24h.totalReadings,
-        trend: stats24h.trendDirection
-      },
-      mediumTerm: {
-        period: '7 days',
-        avgHealthScore: stats7d.avgHealthScore,
-        avgPH: stats7d.avgPH,
-        totalReadings: stats7d.totalReadings,
-        trend: stats7d.trendDirection
-      },
-      longTerm: {
-        period: '30 days',
-        avgHealthScore: stats30d.avgHealthScore,
-        avgPH: stats30d.avgPH,
-        totalReadings: stats30d.totalReadings,
-        trend: stats30d.trendDirection
-      },
-      overallAssessment: {
-        improving: [stats24h, stats7d, stats30d].filter(s => s.trendDirection === 'improving').length,
-        declining: [stats24h, stats7d, stats30d].filter(s => s.trendDirection === 'declining').length,
-        stable: [stats24h, stats7d, stats30d].filter(s => s.trendDirection === 'stable').length
-      }
-    };
-
-    return res.json({
-      success: true,
-      data: trends
-    });
 
   } catch (error: any) {
     logger.error('Trends analysis error:', error);

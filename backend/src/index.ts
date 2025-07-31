@@ -14,7 +14,6 @@ import { setupRoutes } from './routes';
 dotenv.config();
 
 console.log('🔧 NODE_ENV:', process.env.NODE_ENV);
-console.log('🔧 All NODE env vars:', Object.keys(process.env).filter(k => k.includes('NODE')));
 
 const app = express();
 const server = createServer(app);

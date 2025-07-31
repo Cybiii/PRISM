@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { authenticatedFetch, isAuthenticated } from '../lib/auth'
 import { 
   WifiIcon,
   BeakerIcon,
@@ -126,6 +127,13 @@ export default function LiveAnalysisMonitor() {
     let progressInterval: NodeJS.Timeout | null = null
     
     try {
+      // Check authentication first
+      if (!isAuthenticated()) {
+        console.error('❌ User not authenticated - redirecting to login')
+        window.location.href = '/login'
+        return
+      }
+
       setIsAnalyzing(true)
       resetSteps()
 
@@ -166,21 +174,27 @@ export default function LiveAnalysisMonitor() {
       // Step 3: ML Processing
       updateStep('processing', 'active')
       
-      // Call the actual API
-      const response = await fetch('http://localhost:3001/api/readings/manual', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('puma_access_token')}`
-        }
+      // Call the actual API using authenticated fetch
+      const response = await authenticatedFetch('/readings/manual', {
+        method: 'POST'
       })
 
       const data = await response.json()
       
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.error('❌ Authentication failed - redirecting to login')
+          window.location.href = '/login'
+          return
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       if (data.success && data.data) {
-        const readingData = data.data
+        // Access the nested readingData structure from backend
+        const readingData = data.data.readingData || data.data
         
-        // Update current data display with actual backend response structure
+        // Update current data display with backend response
         setCurrentData({
           ph: readingData.averagedReading?.ph,
           color: readingData.averagedReading?.color,
@@ -198,6 +212,7 @@ export default function LiveAnalysisMonitor() {
         updateStep('storage', 'completed')
         
       } else {
+        console.error('❌ Backend response failed:', data)
         setSteps(prev => prev.map(step => 
           step.status === 'active' ? { ...step, status: 'error' } : step
         ))
@@ -402,7 +417,7 @@ export default function LiveAnalysisMonitor() {
                   🔬
                 </motion.div>
                 <span className="ml-2">Current Reading</span>
-              </h3>
+            </h3>
               <motion.div
                 animate={{ rotate: [0, 10, -10, 0] }}
                 transition={{ duration: 3, repeat: Infinity }}
@@ -416,7 +431,7 @@ export default function LiveAnalysisMonitor() {
               {/* Fun Primary Metrics */}
               <div className="grid grid-cols-1 gap-4">
                 {/* pH Level - Fun Card */}
-                {currentData.ph && (
+              {currentData.ph && (
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30"
@@ -516,69 +531,12 @@ export default function LiveAnalysisMonitor() {
                        currentData.colorScore >= 3 ? 'Drink more water soon!' :
                        'DRINK WATER NOW! Your body is thirsty!'}
                     </div>
-                  </div>
+                </div>
                 </motion.div>
               )}
-
-              {/* Fun Color Analysis */}
-              {currentData.color && (
-                <div className="bg-white/20 backdrop-blur rounded-2xl p-4 border border-white/30">
-                  <div className="flex items-center mb-3">
-                    <span className="text-2xl mr-2">🎨</span>
-                    <span className="font-bold text-lg">Color Detective Results</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-white/80">Sample Color:</span>
-                    <div className="flex items-center space-x-2">
-                      <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
-                        style={{ backgroundColor: `rgb(${currentData.color.r}, ${currentData.color.g}, ${currentData.color.b})` }}
-                      />
-                      <span className="font-mono text-sm">
-                        RGB({currentData.color.r}, {currentData.color.g}, {currentData.color.b})
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-red-500/30 rounded-lg p-2 text-center">
-                      <div className="text-xs opacity-75">Red</div>
-                      <div className="font-bold">{currentData.color.r}</div>
-                    </div>
-                    <div className="bg-green-500/30 rounded-lg p-2 text-center">
-                      <div className="text-xs opacity-75">Green</div>
-                      <div className="font-bold">{currentData.color.g}</div>
-                    </div>
-                    <div className="bg-blue-500/30 rounded-lg p-2 text-center">
-                      <div className="text-xs opacity-75">Blue</div>
-                      <div className="font-bold">{currentData.color.b}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
+              
               {/* Fun Status Info */}
               <div className="bg-white/10 rounded-2xl p-4 space-y-3">
-                {/* Confidence Meter */}
-                {currentData.confidence && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">Confidence Level:</span>
-                      <span className="font-bold">{(currentData.confidence * 100).toFixed(1)}%</span>
-                    </div>
-                    <div className="bg-white/20 rounded-full h-3 overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${currentData.confidence * 100}%` }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="bg-gradient-to-r from-green-400 to-emerald-500 h-full rounded-full"
-                      />
-                    </div>
-                  </div>
-                )}
-                
                 <div className="flex justify-between items-center">
                   <span>Last Updated:</span>
                   <span className="font-medium">{new Date().toLocaleTimeString()}</span>
@@ -591,40 +549,8 @@ export default function LiveAnalysisMonitor() {
                   </span>
                 </div>
               </div>
-
-              {/* Fun Recommendations */}
-              {(currentData.ph || currentData.colorScore) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-yellow-400 text-yellow-900 rounded-2xl p-4"
-                >
-                  <div className="flex items-center mb-2">
-                    <span className="font-bold text-lg">Your Personal Health Coach Says:</span>
-                  </div>
-                  <div className="space-y-1 font-medium">
-                    {currentData.recommendations && currentData.recommendations.length > 0 ? (
-                      currentData.recommendations.map((rec, index) => (
-                        <div key={index}>• {rec}</div>
-                      ))
-                    ) : (
-                      <>
-                        {currentData.colorScore && currentData.colorScore < 7 ? 
-                          'Drink 8-10 glasses of water daily - your body will thank you!' : 
-                          'Keep up those amazing hydration levels!'}
-                        <br />
-                        {currentData.ph && (currentData.ph < 6.0 || currentData.ph > 8.0) ? 
-                          'Consider chatting with your doctor about these pH levels' : 
-                          'Your pH levels are in the perfect zone - well done!'}
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-              )}
             </div>
           </div>
-
-
         </div>
       </div>
     </div>

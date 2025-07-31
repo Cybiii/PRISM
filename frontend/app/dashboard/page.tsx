@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { isAuthenticated, verifyToken } from '../lib/auth'
 // Animation imports removed for performance
 import { 
   BeakerIcon, 
@@ -61,10 +62,26 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  // Load user profile on mount
+  // Check authentication and load user profile on mount
   useEffect(() => {
-    const loadUserProfile = async () => {
+    const checkAuthAndLoadProfile = async () => {
       try {
+        // Check if user is authenticated
+        if (!isAuthenticated()) {
+          console.log('❌ User not authenticated - redirecting to login')
+          router.push('/login')
+          return
+        }
+
+        // Verify token is still valid
+        const isValid = await verifyToken()
+        if (!isValid) {
+          console.log('❌ Token invalid - redirecting to login')
+          router.push('/login')
+          return
+        }
+
+        // Load user profile
         const userData = localStorage.getItem('puma_user_data')
         if (userData) {
           const parsed = JSON.parse(userData)
@@ -77,12 +94,13 @@ export default function Dashboard() {
           })
         }
       } catch (error) {
-        console.error('Error loading user profile:', error)
+        console.error('Error during authentication check:', error)
+        router.push('/login')
       }
     }
 
-    loadUserProfile()
-  }, [])
+    checkAuthAndLoadProfile()
+  }, [router])
 
   // Check backend connection
   useEffect(() => {
@@ -112,11 +130,19 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('puma_access_token')
-    localStorage.removeItem('puma_refresh_token') 
-    localStorage.removeItem('puma_user_data')
-    router.push('/login')
+  const handleLogout = async () => {
+    try {
+      // Import logout function dynamically to avoid circular imports
+      const { logout } = await import('../lib/auth')
+      await logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Fallback: clear localStorage and redirect
+      localStorage.removeItem('puma_access_token')
+      localStorage.removeItem('puma_refresh_token') 
+      localStorage.removeItem('puma_user_data')
+      router.push('/login')
+    }
   }
 
 

@@ -154,24 +154,24 @@ export class SerialService {
       return null;
     }
     
-    logger.info(`📡 Parsing Arduino data: "${trimmedData}"`);
+    logger.debug(`📡 Parsing Arduino data: "${trimmedData}"`);
     
     try {
       // New Arduino format: "Hydration: Good | Raw ADC: 512 | Voltage: 2.500 V | pH: 7.35 | RGB: 155,164,62"
       // Updated format includes RGB values for K-means analysis
       
+      // Enhanced parsing for current Arduino format: "Hydration: Good | Raw ADC: 712 | Voltage: 3.480 V | pH: 6.51 | RGB: 75,100,90"
       if (data.includes('Hydration:') && data.includes('pH:')) {
         const hydrationMatch = data.match(/Hydration:\s*([^|]+)/);
         const phMatch = data.match(/pH:\s*([\d.]+)/);
-        const rgbMatch = data.match(/RGB:\s*(\d+),(\d+),(\d+)/);
         const voltageMatch = data.match(/Voltage:\s*([\d.]+)/);
         const adcMatch = data.match(/Raw ADC:\s*(\d+)/);
         
-        if (phMatch && rgbMatch) {
+        // More flexible RGB parsing to handle different spacing
+        const rgbMatch = data.match(/RGB:\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        
+        if (phMatch) {
           const ph = parseFloat(phMatch[1]);
-          const r = parseInt(rgbMatch[1]);
-          const g = parseInt(rgbMatch[2]);
-          const b = parseInt(rgbMatch[3]);
           const hydrationStatus = hydrationMatch?.[1]?.trim();
           const voltage = voltageMatch ? parseFloat(voltageMatch[1]) : null;
           const rawADC = adcMatch ? parseInt(adcMatch[1]) : null;
@@ -182,13 +182,26 @@ export class SerialService {
             return null;
           }
           
-          // Validate RGB values
-          if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-            logger.warn('RGB values out of range:', { r, g, b });
-            return null;
+          let r = 128, g = 128, b = 128; // Default values if RGB not found
+          
+          if (rgbMatch) {
+            r = parseInt(rgbMatch[1]);
+            g = parseInt(rgbMatch[2]);
+            b = parseInt(rgbMatch[3]);
+            
+            // Validate RGB values
+            if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+              logger.warn('RGB values out of range, using defaults:', { r, g, b });
+              r = Math.max(0, Math.min(255, r));
+              g = Math.max(0, Math.min(255, g));
+              b = Math.max(0, Math.min(255, b));
+            }
+            logger.debug(`✅ Successfully parsed RGB: (${r},${g},${b})`);
+          } else {
+            logger.warn('RGB values not found in Arduino data, using defaults (128,128,128)');
           }
           
-          logger.debug(`Parsed Arduino data: Hydration=${hydrationStatus}, pH=${ph}, RGB=(${r},${g},${b}), Voltage=${voltage}V, ADC=${rawADC}`);
+          logger.info(`🎯 Arduino data parsed successfully: Hydration=${hydrationStatus}, pH=${ph}, RGB=(${r},${g},${b}), Voltage=${voltage}V, ADC=${rawADC}`);
           
           return {
             ph,
@@ -253,11 +266,11 @@ export class SerialService {
           typeof values.G !== 'number' || 
           typeof values.B !== 'number') {
         const trimmedData = data.trim();
-        logger.warn('Invalid Arduino data format');
-        logger.info(`📡 Arduino says: "${trimmedData}"`);
-        logger.info(`📡 Raw length: ${data.length}, Trimmed length: ${trimmedData.length}`);
-        logger.info(`📡 Raw bytes: [${Array.from(data).map(c => c.charCodeAt(0)).join(', ')}]`);
-        logger.info(`📡 Raw string: ${JSON.stringify(data)}`);
+        logger.debug('Invalid Arduino data format');
+        logger.debug(`📡 Arduino says: "${trimmedData}"`);
+        logger.debug(`📡 Raw length: ${data.length}, Trimmed length: ${trimmedData.length}`);
+        logger.debug(`📡 Raw bytes: [${Array.from(data).map(c => c.charCodeAt(0)).join(', ')}]`);
+        logger.debug(`📡 Raw string: ${JSON.stringify(data)}`);
         logger.debug('Expected format: "Hydration: Good | Raw ADC: 512 | Voltage: 2.500 V | pH: 7.35 | RGB: 155,164,62"');
         return null;
       }

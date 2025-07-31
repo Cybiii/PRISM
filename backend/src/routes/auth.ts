@@ -37,8 +37,8 @@ router.post('/signup', async (req: Request, res: Response) => {
           emailConfirmed: userSession.user.email_confirmed_at ? true : false
         },
         profile: userSession.profile,
-        access_token: userSession.accessToken,
-        refresh_token: userSession.refreshToken
+        accessToken: userSession.accessToken,
+        refreshToken: userSession.refreshToken
       }
     });
 
@@ -76,8 +76,8 @@ router.post('/signin', async (req: Request, res: Response) => {
           emailConfirmed: userSession.user.email_confirmed_at ? true : false
         },
         profile: userSession.profile,
-        access_token: userSession.accessToken,
-        refresh_token: userSession.refreshToken
+        accessToken: userSession.accessToken,
+        refreshToken: userSession.refreshToken
       }
     });
 
@@ -177,30 +177,7 @@ router.get('/me', async (req: Request, res: Response) => {
       }
     }
 
-    // Development fallback only if real auth failed or no token
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      logger.info('🔄 Falling back to mock user data for /auth/me');
-      return res.json({
-        success: true,
-        data: {
-          user: {
-            id: 'demo-user-123',
-            email: 'demo@puma-health.com',
-            emailConfirmed: true
-          },
-          profile: {
-            id: 'demo-profile-123',
-            full_name: 'Demo User',
-            age: 25,
-            gender: 'prefer_not_to_say',
-            medical_conditions: [],
-            medications: []
-          }
-        }
-      });
-    }
-
-    // Production: No token provided
+    // No mock user fallback - require real authentication
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -208,7 +185,7 @@ router.get('/me', async (req: Request, res: Response) => {
       });
     }
 
-    // Production: Invalid token
+    // Invalid or expired token
     return res.status(401).json({
       success: false,
       error: 'Invalid or expired token'

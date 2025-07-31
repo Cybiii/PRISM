@@ -24,24 +24,23 @@ export class UserService {
   // Authentication
   async signUp(userData: CreateUserRequest): Promise<UserSession> {
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabaseService['supabase'].auth.signUp({
+      // Use admin API to create user without email confirmation (prevents bounces)
+      const { data: adminUserData, error: adminError } = await supabaseService.adminClient.auth.admin.createUser({
         email: userData.email,
         password: userData.password,
-        options: {
-          data: {
-            full_name: userData.fullName
-          }
+        email_confirm: true, // Skip email confirmation step
+        user_metadata: {
+          full_name: userData.fullName
         }
       });
 
-      if (authError || !authData.user) {
-        logger.error('Error creating user:', authError);
-        throw authError || new Error('Failed to create user');
+      if (adminError || !adminUserData.user) {
+        logger.error('Error creating user:', adminError);
+        throw adminError || new Error('Failed to create user');
       }
 
       // Create user profile
-      const profile = await supabaseService.createUserProfile(authData.user, {
+      const profile = await supabaseService.createUserProfile(adminUserData.user, {
         full_name: userData.fullName,
         age: userData.age,
         gender: userData.gender,
@@ -49,13 +48,24 @@ export class UserService {
         medications: userData.medications
       });
 
-      logger.info(`New user registered: ${userData.email}`);
+      // Now sign in the user to get proper session tokens
+      const { data: signInData, error: signInError } = await supabaseService['supabase'].auth.signInWithPassword({
+        email: userData.email,
+        password: userData.password
+      });
+
+      if (signInError || !signInData.session) {
+        logger.error('Error signing in new user:', signInError);
+        throw signInError || new Error('Failed to sign in new user');
+      }
+
+      logger.info(`New user registered and signed in: ${userData.email}`);
 
       return {
-        user: authData.user,
+        user: signInData.user,
         profile,
-        accessToken: authData.session?.access_token || '',
-        refreshToken: authData.session?.refresh_token || ''
+        accessToken: signInData.session.access_token,
+        refreshToken: signInData.session.refresh_token
       };
 
     } catch (error) {
@@ -190,16 +200,16 @@ export class UserService {
   // Password Management
   async resetPassword(email: string): Promise<void> {
     try {
-      const { error } = await supabaseService['supabase'].auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password`
-      });
-
-      if (error) {
-        logger.error('Error sending reset password email:', error);
-        throw error;
-      }
-
-      logger.info(`Password reset email sent to: ${email}`);
+      // Email sending disabled to prevent bounces - password reset via admin panel only
+      logger.info(`Password reset requested for: ${email} (email sending disabled)`);
+      
+      // Don't actually send email to prevent bounces
+      // const { error } = await supabaseService['supabase'].auth.resetPasswordForEmail(email, {
+      //   redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password`
+      // });
+      
+      // Just return success without sending email
+      return;
     } catch (error) {
       logger.error('Error in password reset:', error);
       throw error;

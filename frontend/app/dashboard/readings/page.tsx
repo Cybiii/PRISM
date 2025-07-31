@@ -555,66 +555,6 @@ export default function ReadingsPage() {
         )}
       </div>
 
-      {/* Health Insights */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-blue-200">
-        <h3 className="text-xl font-semibold text-slate-800 mb-6 flex items-center">
-          <SparklesIcon className="w-6 h-6 mr-3 text-blue-600" />
-          Health Insights
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium text-blue-700">pH Balance Analysis</h4>
-            <div className="space-y-3">
-              {readings.filter(r => r.ph >= 6.5 && r.ph <= 7.5).length > 0 && (
-                <div className="flex items-center space-x-3 text-blue-700">
-                  <CheckCircleIcon className="w-5 h-5" />
-                  <span className="text-sm">
-                    {readings.length > 0 ? ((readings.filter(r => r.ph >= 6.5 && r.ph <= 7.5).length / readings.length) * 100).toFixed(0) : 0}% of readings in optimal pH range
-                  </span>
-                </div>
-              )}
-              {analytics?.avgPh && analytics.avgPh > 7.5 && (
-                <div className="flex items-center space-x-3 text-blue-600">
-                  <ExclamationTriangleIcon className="w-5 h-5" />
-                  <span className="text-sm">pH levels trending alkaline - consider balancing</span>
-                </div>
-              )}
-              {analytics?.avgPh && analytics.avgPh < 6.5 && (
-                <div className="flex items-center space-x-3 text-slate-600">
-                  <ExclamationTriangleIcon className="w-5 h-5" />
-                  <span className="text-sm">pH levels trending acidic - increase alkaline intake</span>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium text-blue-800">Color Score Insights</h4>
-            <div className="space-y-3">
-              {analytics?.lastReading?.color_score != null && analytics.lastReading.color_score <= 1.0 && (
-                <div className="flex items-center space-x-3 text-blue-700">
-                  <CheckCircleIcon className="w-5 h-5" />
-                  <span className="text-sm">Excellent color scores - maintain current habits</span>
-                </div>
-              )}
-              {analytics?.lastReading?.color_score != null && analytics.lastReading.color_score > 2.0 && (
-                <div className="flex items-center space-x-3 text-slate-600">
-                  <ExclamationTriangleIcon className="w-5 h-5" />
-                  <span className="text-sm">Consider improving hydration and diet quality</span>
-                </div>
-              )}
-              {analytics?.lastReading?.color_score != null && analytics.lastReading.color_score > 1.0 && analytics.lastReading.color_score <= 2.0 && (
-                <div className="flex items-center space-x-3 text-blue-600">
-                  <ArrowTrendingUpIcon className="w-5 h-5" />
-                  <span className="text-sm">Color scores in moderate range - room for improvement</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Mobile Bottom Navigation Spacer */}
       <div className="h-20 md:hidden" />
       </div>

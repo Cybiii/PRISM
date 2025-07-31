@@ -89,6 +89,11 @@ export default function SummaryPage() {
       const trendsData = await trendsResponse.json()
       const readingsData = await readingsResponse.json()
 
+      // Debug logging to show data source
+      console.log('📊 Summary page trends source:', trendsData.source || 'unknown')
+      console.log('📊 Summary page readings source:', readingsData.data?.source || 'unknown')
+      console.log('📊 Summary page readings count:', readingsData.data?.count || 0)
+
       if (trendsData.success) {
         setTrends(trendsData.data)
       }
@@ -119,7 +124,7 @@ export default function SummaryPage() {
             }),
             ph: reading.ph || 7.0,
             hydration: reading.hydration_ml || 300,
-            colorScore: reading.color_score || (Math.floor(Math.random() * 3) + 1), // Generate consistent mock score
+            colorScore: reading.color_score || 5, // Default score if not available
             timestamp: reading.timestamp
           }
         })
@@ -197,7 +202,7 @@ export default function SummaryPage() {
     if (!chartData.length) return null
 
     const width = 400
-    const height = 200
+    const height = 300
     const maxPH = Math.max(...chartData.map(d => d.ph))
     const minPH = Math.min(...chartData.map(d => d.ph))
     const range = maxPH - minPH || 1

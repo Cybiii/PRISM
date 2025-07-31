@@ -27,7 +27,7 @@ const links = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconSolid: HomeIconSolid, color: 'bg-blue-600' },
   { name: 'Readings', href: '/dashboard/readings', icon: DocumentDuplicateIcon, iconSolid: DocumentDuplicateIconSolid, color: 'bg-blue-700' },
   { name: 'Scan', href: '/dashboard/scan', icon: BeakerIcon, iconSolid: BeakerIconSolid, color: 'bg-blue-500' },
-  { name: 'Insights', href: '/dashboard/insights', icon: ChartBarIcon, iconSolid: ChartBarIconSolid, color: 'bg-blue-800' },
+
   { name: 'Summary', href: '/dashboard/summary', icon: EyeIcon, iconSolid: EyeIconSolid, color: 'bg-blue-600' },
   { name: 'Profile', href: '/dashboard/profile', icon: UserIcon, iconSolid: UserIconSolid, color: 'bg-slate-600' }
 ]

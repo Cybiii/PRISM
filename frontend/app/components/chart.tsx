@@ -26,28 +26,10 @@ const WeeklyCharts: React.FC<ChartProps> = ({ width = 300, height = 150 }) => {
   const [data, setData] = useState<HealthData[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Generate mock weekly data for now
+  // No mock data - show empty state when no real data
   useEffect(() => {
-    const generateMockData = () => {
-      const mockData: HealthData[] = []
-      const today = new Date()
-      
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - i)
-        
-        mockData.push({
-          date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-          ph: 6.0 + Math.random() * 2.5, // pH between 6.0-8.5
-          hydration: Math.random() * 100, // 0-100%
-          colorScore: Math.floor(Math.random() * 5) + 1 // 1-5 score
-        })
-      }
-      return mockData
-    }
-
     setTimeout(() => {
-      setData(generateMockData())
+      setData([]) // Empty data array - will show "no data" states
       setLoading(false)
     }, 500)
   }, [])

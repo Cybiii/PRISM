@@ -99,6 +99,11 @@ export class SupabaseService {
     logger.info('Supabase service initialized');
   }
 
+  // Expose clients for other services
+  get adminClient() {
+    return this.serviceSupabase;
+  }
+
   // User Management
   async createUserProfile(user: User, profileData: Partial<UserProfile>): Promise<UserProfile> {
     const { data, error } = await this.serviceSupabase
