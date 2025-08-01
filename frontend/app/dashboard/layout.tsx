@@ -73,27 +73,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </nav>
           </div>
 
-          {/* User info at bottom */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="flex-shrink-0 p-4 border-t border-gray-200"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-medium text-sm">U</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  Demo User
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  demo@prism-health.com
-                </p>
-              </div>
-            </div>
-          </motion.div>
+
         </div>
       </motion.div>
 

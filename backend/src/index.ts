@@ -50,13 +50,9 @@ async function initializeServices() {
     await dbService.initialize();
     logger.info('Database service initialized');
 
-    // Initialize color classification
+    // Initialize color classification (simplified - no clusters needed)
     colorService = new ColorClassificationService();
     await colorService.initialize();
-    
-    // Load clusters from database
-    const clusters = await dbService.getColorClusters();
-    colorService.setClusters(clusters);
     logger.info('Color classification service initialized');
 
     // Initialize data processing

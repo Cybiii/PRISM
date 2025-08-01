@@ -33,9 +33,9 @@ export interface ColorCluster {
 export interface ArduinoData {
   ph: number;
   color: RGBColor;
+  colorScore: number; // 1-10 score from Arduino
   timestamp: number;
   metadata?: {
-    hydrationStatus?: string;
     voltage?: number;
     rawADC?: number;
   };

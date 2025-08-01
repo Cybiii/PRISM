@@ -23,6 +23,66 @@ interface Services {
 }
 
 /**
+ * Get health recommendations based on numeric score (1-10)
+ */
+function getHealthRecommendationsForScore(score: number): string[] {
+  const recommendationMap: { [key: number]: string[] } = {
+    1: [
+      'Seek immediate medical attention - severe dehydration detected',
+      'This reading indicates a critical health concern',
+      'Contact a healthcare provider immediately'
+    ],
+    2: [
+      'Urgent hydration needed - drink water immediately',
+      'Consider seeking medical advice if symptoms persist',
+      'Monitor closely and increase fluid intake significantly'
+    ],
+    3: [
+      'Severe dehydration detected - increase water intake immediately',
+      'Drink small amounts of water frequently',
+      'Avoid caffeine and alcohol until hydration improves'
+    ],
+    4: [
+      'Significant dehydration - increase fluid intake',
+      'Drink 2-3 glasses of water over the next hour',
+      'Monitor your hydration status closely'
+    ],
+    5: [
+      'Mild to moderate dehydration detected',
+      'Increase water intake gradually throughout the day',
+      'Consider electrolyte replacement if sweating'
+    ],
+    6: [
+      'Slightly dehydrated - increase water intake',
+      'Drink 1-2 glasses of water in the next 30 minutes',
+      'Maintain regular hydration habits'
+    ],
+    7: [
+      'Fair hydration status - room for improvement',
+      'Continue regular water intake',
+      'Aim for 8 glasses of water daily'
+    ],
+    8: [
+      'Good hydration levels detected',
+      'Maintain current fluid intake',
+      'Continue healthy hydration habits'
+    ],
+    9: [
+      'Excellent hydration - well done!',
+      'Monitor to avoid overhydration',
+      'Maintain balanced fluid intake'
+    ],
+    10: [
+      'Optimal hydration status',
+      'Excellent health indicator',
+      'Keep up the great work with your hydration habits'
+    ]
+  };
+
+  return recommendationMap[score] || recommendationMap[7]; // Default to fair if score not found
+}
+
+/**
  * Extract user ID from JWT token using Supabase auth
  */
 async function extractUserIdFromToken(authHeader: string): Promise<string | null> {
@@ -229,26 +289,7 @@ export function setupRoutes(app: Express, services: Services): void {
     }
   });
 
-  // Get color clusters
-  app.get('/api/clusters', async (req: Request, res: Response) => {
-    try {
-      const clusters = await dbService.getColorClusters();
-      const response: ApiResponse = {
-        success: true,
-        data: clusters,
-        timestamp: new Date().toISOString()
-      };
-      res.json(response);
-    } catch (error) {
-      logger.error('Error getting clusters:', error);
-      const response: ApiResponse = {
-        success: false,
-        error: 'Failed to get color clusters',
-        timestamp: new Date().toISOString()
-      };
-      res.status(500).json(response);
-    }
-  });
+  // Clusters endpoint removed - Arduino provides health scores directly
 
   // Get health recommendations for a score
   app.get('/api/recommendations/:score', (req: Request, res: Response) => {
@@ -265,7 +306,7 @@ export function setupRoutes(app: Express, services: Services): void {
         return;
       }
       
-      const recommendations = colorService.getHealthRecommendations(score);
+      const recommendations = getHealthRecommendationsForScore(score);
       const response: ApiResponse = {
         success: true,
         data: { score, recommendations },
@@ -343,27 +384,7 @@ export function setupRoutes(app: Express, services: Services): void {
     }
   });
 
-  // Retrain color clusters
-  app.post('/api/clusters/retrain', async (req: Request, res: Response) => {
-    try {
-      await processingService.retrainColorClusters();
-      
-      const response: ApiResponse = {
-        success: true,
-        data: { message: 'Cluster retraining initiated' },
-        timestamp: new Date().toISOString()
-      };
-      res.json(response);
-    } catch (error) {
-      logger.error('Error retraining clusters:', error);
-      const response: ApiResponse = {
-        success: false,
-        error: 'Failed to retrain clusters',
-        timestamp: new Date().toISOString()
-      };
-      res.status(500).json(response);
-    }
-  });
+  // Cluster retraining endpoint removed - Arduino provides health scores directly
 
   // Get pH buffer statistics
   app.get('/api/ph/buffer', (req: Request, res: Response) => {

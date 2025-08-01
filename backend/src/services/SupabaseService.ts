@@ -161,6 +161,19 @@ export class SupabaseService {
 
   // Health Readings
   async saveHealthReading(reading: HealthReading): Promise<HealthReading> {
+    // Debug logging to see what data we're trying to save
+    logger.info('Attempting to save health reading:', {
+      user_id: reading.user_id,
+      ph: reading.ph,
+      health_score: reading.health_score,
+      hydration_level: reading.hydration_level,
+      color_r: reading.color_r,
+      color_g: reading.color_g,
+      color_b: reading.color_b,
+      alert_level: reading.alert_level,
+      reading_source: reading.reading_source
+    });
+
     const { data, error } = await this.serviceSupabase
       .from('health_readings')
       .insert(reading)
@@ -169,6 +182,7 @@ export class SupabaseService {
 
     if (error) {
       logger.error('Error saving health reading:', error);
+      logger.error('Failed reading data:', reading);
       throw error;
     }
 
@@ -404,15 +418,16 @@ export class SupabaseService {
     processedData: ProcessedData, 
     deviceId?: string
   ): HealthReading {
+    // Arduino scoring: 10=best (excellent), 1=worst (critical)
     const hydrationLevels: { [key: number]: 'excellent' | 'good' | 'fair' | 'poor' | 'critical' } = {
-      1: 'excellent', 2: 'excellent', 3: 'good', 4: 'good', 
-      5: 'fair', 6: 'fair', 7: 'poor', 8: 'poor', 
-      9: 'critical', 10: 'critical'
+      10: 'excellent', 9: 'excellent', 8: 'good', 7: 'good', 
+      6: 'fair', 5: 'fair', 4: 'poor', 3: 'poor', 
+      2: 'critical', 1: 'critical'
     };
 
     const alertLevels: { [key: number]: 'none' | 'low' | 'medium' | 'high' | 'critical' } = {
-      1: 'none', 2: 'none', 3: 'none', 4: 'low', 5: 'low',
-      6: 'medium', 7: 'medium', 8: 'high', 9: 'critical', 10: 'critical'
+      10: 'none', 9: 'none', 8: 'none', 7: 'low', 6: 'low',
+      5: 'medium', 4: 'medium', 3: 'high', 2: 'critical', 1: 'critical'
     };
 
     return {
@@ -427,8 +442,9 @@ export class SupabaseService {
       confidence_score: processedData.confidence,
       recommendations: [], // Will be populated by the calling service
       alert_level: alertLevels[processedData.colorScore] || 'none',
-      alert_message: processedData.colorScore >= 8 ? 'High health score detected - consider medical consultation' : undefined,
+      alert_message: processedData.colorScore <= 3 ? 'Low health score detected - consider medical consultation' : undefined,
       device_id: deviceId,
+      reading_source: 'manual' as const, // Manual reading triggered by user
       reading_time: processedData.timestamp.toISOString()
     };
   }

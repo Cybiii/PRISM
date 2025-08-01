@@ -62,8 +62,8 @@ export default function LiveAnalysisMonitor() {
     },
     {
       id: 'processing',
-      name: 'ML Processing',
-      description: 'K-means analysis and health score calculation',
+      name: 'Arduino Analysis',
+      description: 'Direct health score from Arduino sensor analysis',
       icon: CpuChipIcon,
       status: 'waiting'
     },
@@ -171,7 +171,7 @@ export default function LiveAnalysisMonitor() {
       }
       updateStep('collection', 'completed')
 
-      // Step 3: ML Processing
+      // Step 3: Arduino Analysis
       updateStep('processing', 'active')
       
       // Call the actual API using authenticated fetch

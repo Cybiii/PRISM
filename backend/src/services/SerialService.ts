@@ -163,9 +163,9 @@ export class SerialService {
       // New Arduino format: "Hydration: Good | Raw ADC: 512 | Voltage: 2.500 V | pH: 7.35 | RGB: 155,164,62"
       // Updated format includes RGB values for K-means analysis
       
-      // Enhanced parsing for current Arduino format: "Hydration: Good | Raw ADC: 712 | Voltage: 3.480 V | pH: 6.51 | RGB: 75,100,90"
+      // Enhanced parsing for current Arduino format: "Hydration: 10 | Raw ADC: 712 | Voltage: 3.480 V | pH: 6.51 | RGB: 75,100,90"
       if (data.includes('Hydration:') && data.includes('pH:')) {
-        const hydrationMatch = data.match(/Hydration:\s*([^|]+)/);
+        const hydrationMatch = data.match(/Hydration:\s*(\d+)/);
         const phMatch = data.match(/pH:\s*([\d.]+)/);
         const voltageMatch = data.match(/Voltage:\s*([\d.]+)/);
         const adcMatch = data.match(/Raw ADC:\s*(\d+)/);
@@ -173,15 +173,21 @@ export class SerialService {
         // More flexible RGB parsing to handle different spacing
         const rgbMatch = data.match(/RGB:\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
         
-        if (phMatch) {
+        if (phMatch && hydrationMatch) {
           const ph = parseFloat(phMatch[1]);
-          const hydrationStatus = hydrationMatch?.[1]?.trim();
+          const colorScore = parseInt(hydrationMatch[1]);
           const voltage = voltageMatch ? parseFloat(voltageMatch[1]) : null;
           const rawADC = adcMatch ? parseInt(adcMatch[1]) : null;
           
           // Validate pH range
           if (ph < 0 || ph > 14) {
             logger.warn('pH value out of range:', ph);
+            return null;
+          }
+          
+          // Validate color score range
+          if (colorScore < 1 || colorScore > 10) {
+            logger.warn('Color score out of range (1-10):', colorScore);
             return null;
           }
           
@@ -204,14 +210,14 @@ export class SerialService {
             logger.warn('RGB values not found in Arduino data, using defaults (128,128,128)');
           }
           
-          logger.info(`🎯 Arduino data parsed successfully: Hydration=${hydrationStatus}, pH=${ph}, RGB=(${r},${g},${b}), Voltage=${voltage}V, ADC=${rawADC}`);
+          logger.info(`🎯 Arduino data parsed successfully: ColorScore=${colorScore}, pH=${ph}, RGB=(${r},${g},${b}), Voltage=${voltage}V, ADC=${rawADC}`);
           
           return {
             ph,
             color: { r, g, b },
+            colorScore,
             timestamp: Date.now(),
             metadata: {
-              hydrationStatus,
               voltage: voltage || undefined,
               rawADC: rawADC || undefined
             }
@@ -230,26 +236,28 @@ export class SerialService {
           return {
             ph: 7.0 + (Math.random() - 0.5) * 2, // Simulate pH 6-8
             color: { r, g, b },
+            colorScore: Math.floor(Math.random() * 10) + 1, // Random score 1-10
             timestamp: Date.now()
           };
         }
       }
       
-      // Handle simple hydration status (current Arduino output)
-      const hydrationStatuses = ['Overhydrated', 'Good', 'Fair', 'Slightly Dehydrated', 'Dehydrated', 'Severley Dehydrated', 'Critical'];
-      if (hydrationStatuses.includes(trimmedData)) {
-        logger.info(`🎯 Parsing simple hydration status: "${trimmedData}"`);
+      // Handle simple numeric score (1-10)
+      const numericScore = parseInt(trimmedData);
+      if (!isNaN(numericScore) && numericScore >= 1 && numericScore <= 10) {
+        logger.info(`🎯 Parsing simple numeric score: ${numericScore}`);
         
-        // Generate reasonable pH and RGB values based on hydration status
-        const statusData = this.getDataFromHydrationStatus(trimmedData);
+        // Generate reasonable pH and RGB values based on score
+        const scoreData = this.getDataFromScore(numericScore);
         
         return {
-          ph: statusData.ph,
-          color: statusData.color,
+          ph: scoreData.ph,
+          color: scoreData.color,
+          colorScore: numericScore,
           timestamp: Date.now(),
           metadata: {
-            hydrationStatus: trimmedData,
-            dataSource: 'simple_status'
+            voltage: undefined,
+            rawADC: undefined
           }
         };
       }
@@ -267,6 +275,7 @@ export class SerialService {
         return {
           ph: parsed.ph || parsed.pH,
           color: rgbData,
+          colorScore: parsed.colorScore || 7, // Default to fair score
           timestamp: Date.now()
         };
       }
@@ -314,6 +323,7 @@ export class SerialService {
       return {
         ph: values.PH,
         color: rgbData,
+        colorScore: values.SCORE || 7, // Default to fair score if not provided
         timestamp: Date.now()
       };
     } catch (error) {
@@ -323,41 +333,53 @@ export class SerialService {
   }
 
   /**
-   * Map hydration status to realistic pH and RGB values
+   * Map numeric score (1-10) to realistic pH and RGB values
    */
-  private getDataFromHydrationStatus(status: string): { ph: number; color: RGBColor } {
-    const statusMap: { [key: string]: { ph: number; color: RGBColor } } = {
-      'Overhydrated': {
-        ph: 6.0 + Math.random() * 0.5, // pH 6.0-6.5
-        color: { r: 250, g: 255, b: 220 } // Very pale yellow/clear
-      },
-      'Good': {
-        ph: 6.5 + Math.random() * 0.8, // pH 6.5-7.3
-        color: { r: 255, g: 248, b: 180 } // Pale yellow
-      },
-      'Fair': {
-        ph: 7.0 + Math.random() * 0.5, // pH 7.0-7.5
-        color: { r: 255, g: 235, b: 140 } // Light yellow
-      },
-      'Slightly Dehydrated': {
-        ph: 7.2 + Math.random() * 0.6, // pH 7.2-7.8
-        color: { r: 255, g: 215, b: 100 } // Yellow
-      },
-      'Dehydrated': {
-        ph: 7.5 + Math.random() * 0.4, // pH 7.5-7.9
-        color: { r: 255, g: 190, b: 60 } // Dark yellow
-      },
-      'Severley Dehydrated': {
-        ph: 7.8 + Math.random() * 0.3, // pH 7.8-8.1
-        color: { r: 200, g: 140, b: 40 } // Amber
-      },
-      'Critical': {
+  private getDataFromScore(score: number): { ph: number; color: RGBColor } {
+    const scoreMap: { [key: number]: { ph: number; color: RGBColor } } = {
+      1: { // Critical - dark brown/red
         ph: 8.0 + Math.random() * 0.5, // pH 8.0-8.5
-        color: { r: 150, g: 100, b: 25 } // Dark brown
+        color: { r: 120, g: 80, b: 20 }
+      },
+      2: { // Very close to critical
+        ph: 7.8 + Math.random() * 0.3, // pH 7.8-8.1
+        color: { r: 150, g: 100, b: 25 }
+      },
+      3: { // Severely dehydrated
+        ph: 7.6 + Math.random() * 0.3, // pH 7.6-7.9
+        color: { r: 180, g: 120, b: 30 }
+      },
+      4: { // Dehydrated
+        ph: 7.4 + Math.random() * 0.3, // pH 7.4-7.7
+        color: { r: 200, g: 140, b: 40 }
+      },
+      5: { // Between Slightly and Dehydrated
+        ph: 7.2 + Math.random() * 0.3, // pH 7.2-7.5
+        color: { r: 230, g: 170, b: 50 }
+      },
+      6: { // Slightly Dehydrated
+        ph: 7.0 + Math.random() * 0.3, // pH 7.0-7.3
+        color: { r: 255, g: 200, b: 80 }
+      },
+      7: { // Fair
+        ph: 6.8 + Math.random() * 0.3, // pH 6.8-7.1
+        color: { r: 255, g: 220, b: 120 }
+      },
+      8: { // Between Good and Fair
+        ph: 6.6 + Math.random() * 0.3, // pH 6.6-6.9
+        color: { r: 255, g: 235, b: 150 }
+      },
+      9: { // Overhydrated
+        ph: 6.2 + Math.random() * 0.3, // pH 6.2-6.5
+        color: { r: 250, g: 250, b: 210 }
+      },
+      10: { // Good - pale yellow
+        ph: 6.5 + Math.random() * 0.5, // pH 6.5-7.0
+        color: { r: 255, g: 248, b: 180 }
       }
     };
 
-    const data = statusMap[status] || statusMap['Good']; // Default to 'Good' if status not found
+    const data = scoreMap[score] || scoreMap[7]; // Default to Fair if score not found
     
     // Add some random variation to make it more realistic
     const variation = 0.1;
@@ -485,6 +507,7 @@ export class SerialService {
           g: Math.max(0, selectedScenario.g + Math.floor((Math.random() - 0.5) * 5000)),
           b: Math.max(0, selectedScenario.b + Math.floor((Math.random() - 0.5) * 2000))
         },
+        colorScore: Math.floor(Math.random() * 10) + 1, // Random score 1-10
         timestamp: Date.now()
       };
 
@@ -599,22 +622,18 @@ export class SerialService {
       const averagedReading = this.averageReadings(readings);
       logger.info('Averaged reading:', averagedReading);
       
-      // Step 4: Process through k-means algorithm and get rating
-      let colorResult: { score: number; confidence: number; lab: any };
-      let recommendations: string[];
+      // Step 4: Use Arduino's color score directly (no K-means needed)
+      const colorScore = averagedReading.colorScore;
+      logger.info(`Arduino color score: ${colorScore}`);
       
-      try {
-        colorResult = this.colorService.classifyColor(averagedReading.color);
-        logger.info(`K-means classification: Score=${colorResult.score}, Confidence=${colorResult.confidence.toFixed(3)}`);
-        
-        // Step 5: Get health recommendations
-        recommendations = this.colorService.getHealthRecommendations(colorResult.score);
-      } catch (error) {
-        logger.error('Color classification failed, using fallback:', error);
-        // Fallback for when K-means fails
-        colorResult = { score: 5, confidence: 0.5, lab: { l: 50, a: 0, b: 0 } };
-        recommendations = ['Unable to analyze color - please try again', 'Ensure good lighting conditions'];
-      }
+      const colorResult = {
+        score: colorScore,
+        confidence: 1.0, // Arduino analysis is always confident
+        lab: { l: 50, a: 0, b: 0 } // Not used anymore
+      };
+      
+      // Step 5: Get health recommendations based on Arduino score
+      const recommendations = this.getHealthRecommendations(colorScore);
       
       // Step 6: Store in Supabase with userId and date
       const readingId = await this.storeProcessedReading(averagedReading, colorResult, userId, recommendations);
@@ -733,6 +752,7 @@ export class SerialService {
     const avgR = Math.round(readings.reduce((sum, r) => sum + r.color.r, 0) / readings.length);
     const avgG = Math.round(readings.reduce((sum, r) => sum + r.color.g, 0) / readings.length);
     const avgB = Math.round(readings.reduce((sum, r) => sum + r.color.b, 0) / readings.length);
+    const avgColorScore = Math.round(readings.reduce((sum, r) => sum + r.colorScore, 0) / readings.length);
     
     const averagedReading: ArduinoData = {
       ph: Math.round(avgPh * 100) / 100, // Round to 2 decimal places
@@ -741,6 +761,7 @@ export class SerialService {
         g: Math.max(0, Math.min(255, avgG)),
         b: Math.max(0, Math.min(255, avgB))
       },
+      colorScore: Math.max(1, Math.min(10, avgColorScore)), // Ensure score is between 1-10
       timestamp: Date.now()
     };
     
@@ -774,28 +795,30 @@ export class SerialService {
    * Generate a single mock reading (enhanced for manual reading)
    */
   private generateSingleMockReadingData(): ArduinoData {
-    // More realistic scenarios for manual testing
+    // More realistic scenarios for manual testing with color scores
     const scenarios = [
-      // Healthy pale yellow (good hydration)
-      { r: 45000, g: 50000, b: 20000, c: 55000, ph: 6.0 + Math.random() * 1.5 },
-      // Normal yellow 
-      { r: 40000, g: 45000, b: 15000, c: 50000, ph: 6.5 + Math.random() * 1.0 },
-      // Dark yellow (mild dehydration)
-      { r: 35000, g: 38000, b: 12000, c: 45000, ph: 7.0 + Math.random() * 0.8 },
-      // Amber (concerning)
-      { r: 30000, g: 32000, b: 8000, c: 40000, ph: 7.5 + Math.random() * 0.6 },
-      // Dark amber/brown (critical)
-      { r: 25000, g: 20000, b: 5000, c: 35000, ph: 8.0 + Math.random() * 0.5 }
+      // Healthy pale yellow (good hydration) - Score 10
+      { r: 45000, g: 50000, b: 20000, c: 55000, ph: 6.0 + Math.random() * 1.5, score: 10 },
+      // Normal yellow - Score 8
+      { r: 40000, g: 45000, b: 15000, c: 50000, ph: 6.5 + Math.random() * 1.0, score: 8 },
+      // Dark yellow (mild dehydration) - Score 6
+      { r: 35000, g: 38000, b: 12000, c: 45000, ph: 7.0 + Math.random() * 0.8, score: 6 },
+      // Amber (concerning) - Score 4
+      { r: 30000, g: 32000, b: 8000, c: 40000, ph: 7.5 + Math.random() * 0.6, score: 4 },
+      // Dark amber/brown (critical) - Score 2
+      { r: 25000, g: 20000, b: 5000, c: 35000, ph: 8.0 + Math.random() * 0.5, score: 2 }
     ];
 
     // Weighted selection toward healthier readings
     const weights = [0.4, 0.3, 0.15, 0.1, 0.05];
     let random = Math.random();
     let selectedScenario = scenarios[0];
+    let selectedIndex = 0;
     
     for (let i = 0; i < weights.length; i++) {
       if (random < weights.slice(0, i + 1).reduce((a, b) => a + b, 0)) {
         selectedScenario = scenarios[i];
+        selectedIndex = i;
         break;
       }
     }
@@ -809,6 +832,7 @@ export class SerialService {
         g: Math.max(0, Math.min(255, Math.round(selectedScenario.g / 256) + (Math.random() - 0.5) * 10)), 
         b: Math.max(0, Math.min(255, Math.round(selectedScenario.b / 256) + (Math.random() - 0.5) * 10))
       },
+      colorScore: selectedScenario.score,
       timestamp: Date.now()
     };
   }
@@ -853,6 +877,7 @@ export class SerialService {
         g: Math.max(0, Math.min(255, Math.round(selectedScenario.g / 256))),
         b: Math.max(0, Math.min(255, Math.round(selectedScenario.b / 256)))
       },
+      colorScore: Math.floor(Math.random() * 10) + 1, // Random score 1-10
       timestamp: Date.now()
     };
 
@@ -870,5 +895,65 @@ export class SerialService {
         });
       });
     }
+  }
+
+  /**
+   * Get health recommendations based on numeric score (1-10)
+   */
+  private getHealthRecommendations(score: number): string[] {
+    const recommendationMap: { [key: number]: string[] } = {
+      1: [
+        'Seek immediate medical attention - severe dehydration detected',
+        'This reading indicates a critical health concern',
+        'Contact a healthcare provider immediately'
+      ],
+      2: [
+        'Urgent hydration needed - drink water immediately',
+        'Consider seeking medical advice if symptoms persist',
+        'Monitor closely and increase fluid intake significantly'
+      ],
+      3: [
+        'Severe dehydration detected - increase water intake immediately',
+        'Drink small amounts of water frequently',
+        'Avoid caffeine and alcohol until hydration improves'
+      ],
+      4: [
+        'Significant dehydration - increase fluid intake',
+        'Drink 2-3 glasses of water over the next hour',
+        'Monitor your hydration status closely'
+      ],
+      5: [
+        'Mild to moderate dehydration detected',
+        'Increase water intake gradually throughout the day',
+        'Consider electrolyte replacement if sweating'
+      ],
+      6: [
+        'Slightly dehydrated - increase water intake',
+        'Drink 1-2 glasses of water in the next 30 minutes',
+        'Maintain regular hydration habits'
+      ],
+      7: [
+        'Fair hydration status - room for improvement',
+        'Continue regular water intake',
+        'Aim for 8 glasses of water daily'
+      ],
+      8: [
+        'Good hydration levels detected',
+        'Maintain current fluid intake',
+        'Continue healthy hydration habits'
+      ],
+      9: [
+        'Excellent hydration - well done!',
+        'Monitor to avoid overhydration',
+        'Maintain balanced fluid intake'
+      ],
+      10: [
+        'Optimal hydration status',
+        'Excellent health indicator',
+        'Keep up the great work with your hydration habits'
+      ]
+    };
+
+    return recommendationMap[score] || recommendationMap[7]; // Default to fair if score not found
   }
 } 

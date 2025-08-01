@@ -32,8 +32,8 @@ export class DataProcessingService {
       // Add pH value to buffer
       this.addPhToBuffer(data.ph, data.timestamp);
 
-      // Process color immediately (no buffering needed)
-      const colorResult = this.colorService.classifyColor(data.color);
+      // Use Arduino's color score directly (no ML classification needed)
+      const colorScore = data.colorScore;
 
       // Get current averaged pH
       const averagePh = this.calculateAveragePh();
@@ -41,15 +41,18 @@ export class DataProcessingService {
       // Create processed data
       const processedData: ProcessedData = {
         phValue: averagePh,
-        colorScore: colorResult.score,
+        colorScore: colorScore,
         colorRgb: data.color,
         timestamp: new Date(data.timestamp),
-        confidence: colorResult.confidence
+        confidence: 1.0 // Arduino analysis is always confident
       };
 
       // Only save to Supabase if we have a valid authenticated user UUID
       if (userId && this.isValidUUID(userId)) {
         try {
+          logger.info(`Processing Arduino data for user: ${userId}`);
+          logger.info(`Arduino data:`, { ph: data.ph, colorScore: data.colorScore, rgb: data.color });
+          
           // Convert to Supabase format
           const healthReading = supabaseService.processedDataToHealthReading(
             userId,
@@ -57,9 +60,10 @@ export class DataProcessingService {
             'arduino-tcs34725'
           );
           
-          // Add recommendations from the color service
-          healthReading.recommendations = this.colorService.getHealthRecommendations(colorResult.score);
+          // Add recommendations based on Arduino score
+          healthReading.recommendations = this.getHealthRecommendations(colorScore);
           
+          logger.info(`Converted to health reading format, attempting to save...`);
           await supabaseService.saveHealthReading(healthReading);
           logger.info(`✅ Saved reading to Supabase for user: ${userId}`);
 
@@ -73,7 +77,7 @@ export class DataProcessingService {
             deviceId: 'arduino-001',
             processed: true,
             userId: userId,
-            recommendations: this.colorService.getHealthRecommendations(colorResult.score)
+            recommendations: this.getHealthRecommendations(colorScore)
           });
 
           // Check for alerts
@@ -217,24 +221,8 @@ export class DataProcessingService {
         return;
       }
 
-      // Prepare training data
-      const trainingData = readings.map(reading => ({
-        lab: reading.colorLab,
-        score: reading.colorScore
-      }));
-
-      // Update clusters
-      const updatedClusters = await this.colorService.updateClustersWithNewData(trainingData);
-
-      // Save updated clusters to database
-      for (const cluster of updatedClusters) {
-        await this.dbService.updateCluster(cluster);
-      }
-
-      logger.info(`Cluster retraining completed with ${trainingData.length} data points`);
-      
-      // Notify clients about updated clusters
-      this.io.emit('clustersUpdated', updatedClusters);
+      // No longer using K-means clusters - Arduino provides scores directly
+      logger.info('Cluster retraining skipped - Arduino provides health scores directly');
 
     } catch (error) {
       logger.error('Error during cluster retraining:', error);
@@ -270,6 +258,7 @@ export class DataProcessingService {
     const mockData: ArduinoData = {
       ph: phValue,
       color: rgbColor,
+      colorScore: 7, // Default fair score for simulated data
       timestamp: Date.now()
     };
 
@@ -282,5 +271,65 @@ export class DataProcessingService {
   private isValidUUID(uuid: string): boolean {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
+  }
+
+  /**
+   * Get health recommendations based on numeric score (1-10)
+   */
+  private getHealthRecommendations(score: number): string[] {
+    const recommendationMap: { [key: number]: string[] } = {
+      1: [
+        'Seek immediate medical attention - severe dehydration detected',
+        'This reading indicates a critical health concern',
+        'Contact a healthcare provider immediately'
+      ],
+      2: [
+        'Urgent hydration needed - drink water immediately',
+        'Consider seeking medical advice if symptoms persist',
+        'Monitor closely and increase fluid intake significantly'
+      ],
+      3: [
+        'Severe dehydration detected - increase water intake immediately',
+        'Drink small amounts of water frequently',
+        'Avoid caffeine and alcohol until hydration improves'
+      ],
+      4: [
+        'Significant dehydration - increase fluid intake',
+        'Drink 2-3 glasses of water over the next hour',
+        'Monitor your hydration status closely'
+      ],
+      5: [
+        'Mild to moderate dehydration detected',
+        'Increase water intake gradually throughout the day',
+        'Consider electrolyte replacement if sweating'
+      ],
+      6: [
+        'Slightly dehydrated - increase water intake',
+        'Drink 1-2 glasses of water in the next 30 minutes',
+        'Maintain regular hydration habits'
+      ],
+      7: [
+        'Fair hydration status - room for improvement',
+        'Continue regular water intake',
+        'Aim for 8 glasses of water daily'
+      ],
+      8: [
+        'Good hydration levels detected',
+        'Maintain current fluid intake',
+        'Continue healthy hydration habits'
+      ],
+      9: [
+        'Excellent hydration - well done!',
+        'Monitor to avoid overhydration',
+        'Maintain balanced fluid intake'
+      ],
+      10: [
+        'Optimal hydration status',
+        'Excellent health indicator',
+        'Keep up the great work with your hydration habits'
+      ]
+    };
+
+    return recommendationMap[score] || recommendationMap[7]; // Default to fair if score not found
   }
 } 
