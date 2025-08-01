@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { isAuthenticated, verifyToken } from '../lib/auth'
+import { isAuthenticated, verifyToken, getApiBaseUrl } from '../lib/auth'
 // Animation imports removed for performance
 import { 
   BeakerIcon, 
@@ -125,7 +125,7 @@ export default function Dashboard() {
   useEffect(() => {
     const checkBackendConnection = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/health', {
+        const response = await fetch(`${getApiBaseUrl()}/health`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -154,7 +154,7 @@ export default function Dashboard() {
     const loadAnalytics = async () => {
       try {
         console.log('🔍 Loading dashboard analytics...')
-        const response = await fetch('http://localhost:3001/api/readings/latest')
+        const response = await fetch(`${getApiBaseUrl()}/readings/latest`)
         console.log('🔍 Analytics response status:', response.status)
         
         if (response.ok) {
@@ -301,7 +301,7 @@ export default function Dashboard() {
                   <UserIcon className="w-3 h-3 md:w-4 md:h-4 text-white" />
                 </div>
                 <span className="text-xs md:text-sm font-medium text-gray-900 max-w-[80px] md:max-w-[120px] truncate">
-                  {userProfile?.full_name?.split(' ')[0] || 'User'}
+                  {userProfile?.full_name || 'User'}
                 </span>
               </button>
 
@@ -323,7 +323,7 @@ export default function Dashboard() {
         <div className="mb-3 md:mb-6">
           <div className="text-center">
             <h2 className="text-base sm:text-xl md:text-2xl font-bold text-blue-600 mb-1">
-              Welcome back, {userProfile?.full_name?.split(' ')[0] || 'User'}!
+              Welcome back, {userProfile?.full_name || 'User'}!
             </h2>
             <p className="text-xs sm:text-sm text-blue-600">{todayStr}</p>
           </div>

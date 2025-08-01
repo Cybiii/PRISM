@@ -24,8 +24,17 @@ const ACCESS_TOKEN_KEY = 'puma_access_token'
 const REFRESH_TOKEN_KEY = 'puma_refresh_token'
 const USER_DATA_KEY = 'puma_user_data'
 
-// API base URL
-const API_BASE_URL = 'http://localhost:3001/api'
+// API base URL - dynamically set based on environment
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api' // Vercel will route /api/* to our serverless functions
+  : 'http://localhost:3001/api'
+
+/**
+ * Get the API base URL for the current environment
+ */
+export function getApiBaseUrl(): string {
+  return API_BASE_URL
+}
 
 /**
  * Get stored access token

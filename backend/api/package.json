@@ -1,0 +1,10 @@
+{
+  "name": "prism-backend-api",
+  "version": "1.0.0",
+  "description": "PRISM Health Backend API for Vercel",
+  "main": "index.js",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.53.0",
+    "@vercel/node": "^3.0.0"
+  }
+}

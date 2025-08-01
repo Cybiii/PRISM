@@ -40,7 +40,14 @@ const navItems = [
     bgColor: 'bg-blue-100',
     isCenter: true
   },
-
+  {
+    name: 'Summary',
+    href: '/dashboard/summary',
+    icon: EyeIcon,
+    color: 'text-slate-600 hover:text-blue-600',
+    activeColor: 'text-blue-600',
+    bgColor: 'bg-blue-100'
+  },
   {
     name: 'Profile',
     href: '/dashboard/profile', 
@@ -56,40 +63,40 @@ export default function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/50 shadow-lg z-50 md:hidden safe-area-bottom">
-      <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
+      <div className="flex items-center justify-between px-1 py-2 max-w-sm mx-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
 
           return (
-            <div key={item.href} className="flex-1">
+            <div key={item.href} className="flex-1 max-w-[4rem]">
               <Link href={item.href}>
                 <div className={`
-                  relative flex flex-col items-center justify-center p-2 rounded-2xl
+                  relative flex flex-col items-center justify-center p-1 rounded-2xl
                   ${isActive ? item.activeColor : item.color}
                 `}>
                   {item.isCenter ? (
                     // Central scan button
                     <div className="relative">
-                      <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                        <Icon className="w-8 h-8 text-white" />
+                      <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <Icon className="w-7 h-7 text-white" />
                       </div>
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-400 rounded-full" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full" />
                     </div>
                   ) : (
                     <div className="relative">
                       {/* Regular nav item */}
                       <div className={`
-                          w-12 h-12 rounded-xl flex items-center justify-center
+                          w-10 h-10 rounded-xl flex items-center justify-center
                           ${isActive ? `${item.bgColor} ${item.activeColor}` : item.color}
                         `}
                       >
-                        <Icon className="w-6 h-6" />
+                        <Icon className="w-5 h-5" />
                       </div>
                       
                       {/* Active indicator */}
                       {isActive && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
                       )}
                     </div>
                   )}
@@ -97,7 +104,7 @@ export default function BottomNav() {
                   {/* Label */}
                   {!item.isCenter && (
                     <span className={`
-                        text-xs font-medium mt-1
+                        text-[10px] font-medium mt-1 leading-tight text-center
                         ${isActive ? item.activeColor : 'text-slate-600'}
                       `}
                     >
