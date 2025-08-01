@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { userService } from '../services/UserService';
 import { logger } from '../utils/logger';
+import { supabaseService } from '../services/SupabaseService';
 
 const router = Router();
 
@@ -299,6 +300,100 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       success: false,
       error: error.message || 'Password reset failed'
     });
+  }
+});
+
+// Google OAuth - Initiate Sign-In
+router.get('/google', async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabaseService['supabase'].auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      logger.error('Google OAuth initiation error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to initiate Google Sign-In'
+      });
+    }
+
+    // Redirect to Google OAuth
+    if (data.url) {
+      return res.redirect(data.url);
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: 'No OAuth URL returned'
+      });
+    }
+
+  } catch (error: any) {
+    logger.error('Google OAuth error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Google Sign-In failed'
+    });
+  }
+});
+
+// Google OAuth - Handle Callback
+router.get('/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, error: oauthError } = req.query;
+
+    if (oauthError) {
+      logger.error('OAuth callback error:', oauthError);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_error`);
+    }
+
+    if (!code) {
+      logger.error('No authorization code received');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=no_code`);
+    }
+
+    // Exchange code for session
+    const { data, error } = await supabaseService['supabase'].auth.exchangeCodeForSession(String(code));
+
+    if (error || !data.session || !data.user) {
+      logger.error('Code exchange error:', error);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=exchange_failed`);
+    }
+
+    // Create or get user profile
+    let profile = await supabaseService.getUserProfile(data.user.id);
+    
+    if (!profile) {
+      // Create profile for new Google user
+      profile = await supabaseService.createUserProfile(data.user, {
+        full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || 'Google User',
+        avatar_url: data.user.user_metadata?.avatar_url
+      });
+      logger.info(`New Google user profile created: ${data.user.email}`);
+    }
+
+    logger.info(`Google user authenticated: ${data.user.email}`);
+
+    // Redirect to frontend with tokens
+    const redirectUrl = new URL(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`);
+    redirectUrl.searchParams.set('access_token', data.session.access_token);
+    redirectUrl.searchParams.set('refresh_token', data.session.refresh_token);
+    redirectUrl.searchParams.set('user_id', data.user.id);
+    redirectUrl.searchParams.set('email', data.user.email || '');
+    redirectUrl.searchParams.set('full_name', profile.full_name || '');
+
+    return res.redirect(redirectUrl.toString());
+
+  } catch (error: any) {
+    logger.error('OAuth callback processing error:', error);
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=callback_error`);
   }
 });
 
