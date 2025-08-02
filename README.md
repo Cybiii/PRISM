@@ -20,7 +20,7 @@ https://github.com/user-attachments/assets/f0917692-7af0-4a94-98b6-ff35a616ed93
 # Contributors:
 
 - **Design Assistant**: [Sebastian Silva](https://github.com/Cybiii)
-- **Fullstack development**: [Nathan Tam](https://github.com/nathandtam)
+- **Software development**: [Nathan Tam](https://github.com/nathandtam)
 - **Hardware/Electrical Engineering**: Edmond Ter Pogosyan
 - **Technical Research & Analysis**: Anchita Ganesh
 - **CAD Modeling & Prototyping**: Ernesto Tellez Perez & Connor McVicker
