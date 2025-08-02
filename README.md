@@ -21,9 +21,9 @@ https://github.com/user-attachments/assets/f0917692-7af0-4a94-98b6-ff35a616ed93
 
 - **Project Design Assistant**: [Sebastian Silva](https://github.com/Cybiii)
 - **Software development**: [Nathan Tam](https://github.com/nathandtam)
-- **Hardware/Electrical Engineering**: Edmond Ter Pogosyan
-- **Technical Research & Analysis**: Anchita Ganesh
-- **CAD Modeling & Prototyping**: Ernesto Tellez Perez & Connor McVicker
+- **Hardware/Electrical Engineering**: [Edmond Ter Pogosyan](https://www.linkedin.com/in/edmondtp/)
+- **Technical Research & Analysis**: [Anchita Ganesh](https://www.linkedin.com/in/anchita-ganesh/)
+- **CAD Modeling & Prototyping**: [Ernesto Tellez Perez](https://www.linkedin.com/in/ernesto-tellez-perez/) & [Connor McVicker](https://www.linkedin.com/in/connor-mcvicker-019899284/)
 
 ### Key Health Indicators
 
