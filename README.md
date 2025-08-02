@@ -1,8 +1,8 @@
-# PUMA - Photosensitive Urinary Monitoring Apparatus
+# PRISM - pH & Rehydration Intensity Sensor Module
 
 ## Overview
 
-PUMA (Photosensitive Urinary Monitoring Apparatus) is an innovative health monitoring system that analyzes color and pH levels of urine to provide real-time health insights. The system uses the TCS34725 color sensor and pH sensors connected to Arduino, with a Node.js backend for data processing and a Next.js frontend for visualization.
+PRISM (pH & Rehydration Intensity Sensor Module) is an innovative health monitoring system that analyzes color and pH levels of urine to provide real-time health insights. The system uses the TCS34725 color sensor and pH sensors connected to Arduino, with a Node.js backend for data processing and a Next.js frontend for visualization.
 
 # Contributors:
 
