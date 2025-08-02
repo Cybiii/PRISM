@@ -4,6 +4,9 @@
 
 PRISM (pH & Rehydration Intensity Sensor Module) is an innovative health monitoring system that analyzes color and pH levels of urine to provide real-time health insights. The system uses the TCS34725 color sensor and pH sensors connected to Arduino, with a Node.js backend for data processing and a Next.js frontend for visualization.
 
+<img width="1451" height="2007" alt="image" src="https://github.com/user-attachments/assets/613cdea0-b143-4899-b50d-bb1d0cf24730" />
+
+
 # Contributors:
 
 - **Design Assistant**: [Sebastian Silva](https://github.com/Cybiii)
